@@ -28,30 +28,55 @@ private:
 	MatrixXd cov_;
 
 	// state transition matrix
-	Eigen::MatrixXd F_;
+	MatrixXd F_;
 
 	// process covariance matrix
-	Eigen::MatrixXd Q_;
+	MatrixXd Q_;
 
 	// measurement matrix
-	Eigen::MatrixXd H_;
+	MatrixXd H_;
 
 	// measurement covariance matrix
-	Eigen::MatrixXd R_;
+	MatrixXd R_;
 
 
 public:
 	// Constructor 
-	EKF(){};
+	EKF()
+	{
+		// Add all of the 10 state variables to the state vector as 0s
+		for(int i = 0; i < 10; i++)
+		{
+			state_ << 0;
+		}
+		
+		// Initialize the covariance matrix with 100 0s
+		for(int i = 0; i < 10; i++)
+		{
+			cov_ << 0;
+		}
+	}
 
 	// Destuctor
-	~EKF(){};
+	~EKF()
+	{
+
+	}
 
 	// Callback function for IMU messages from the VN 100 IMU
 	void IMUCallback(const sensor_msgs::Imu imu_msg)
 	{
 		cout << "IMU message:" << endl;
 		// cout << imu_msg << endl;
+
+		// Calculate dt possibly by saving timestamp from previous message
+
+		// Update the state transition matrix F and process noise matrix Q
+		predict(); // Predict the current state 
+
+		// Update measurement state mapping matrix H and sensor covariance matrix R
+		IMUKalmanUpdate(imu_msg); // Use the data from the IMU to update the state
+
 	}
 
 	// Callback function for the depth messages from the bar30 Depth sensor
@@ -59,6 +84,15 @@ public:
 	{
 		cout << "Depth message:" << endl;
 		cout << depth_msg << endl;
+
+		// Calculate dt
+
+		// Update the state transition matrix F and process noise matrix Q
+		predict(); // Predict the current state 
+
+		// Update measurement state mapping matrix H and sensor covariance matrix R
+		depthKalmanUpdate(depth_msg); // Use the data from the IMU to update the state
+
 	}
 
 	// Callback function for the doppler velocity logger (DVL) messages from the **** DVL
@@ -66,6 +100,39 @@ public:
 	{
 		cout << "DVL message:" << endl;
 		cout << dvl_msg << endl;
+
+		// Calculate dt
+
+		// Update the state transition matrix F and process noise matrix Q
+		predict(); // Predict the current state 
+
+		// Update measurement state mapping matrix H and sensor covariance matrix R
+		DVLKalmanUpdate(dvl_msg); // Use the data from the IMU to update the state
+
+	}
+
+	// Predict the current state based on the previous state
+	void predict() 
+	{
+		// TODO: Add the Kalman Filter prediction step
+	}
+
+	// Update the state based on the predicted state and the data from the IMU
+	void IMUKalmanUpdate(const sensor_msgs::Imu imu_msg)
+	{
+		// TODO: Add the Kalman Filter update stuff for the IMU
+	}
+
+	// Update the state based on the predicted state and the data from the Depth sensor
+	void depthKalmanUpdate(const bar30_depth::Depth depth_msg)
+	{
+		// TODO: Add the Kalman Filter update stuff for the Depth sensor
+	}
+
+	// Update the state based on the predicted state and the data from the DVL
+	void DVLKalmanUpdate(const rti_dvl::DVL dvl_msg)
+	{
+		// TODO: Add the Kalman Filter update stuff for the DVL
 	}
 
 };
