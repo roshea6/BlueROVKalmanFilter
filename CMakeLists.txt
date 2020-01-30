@@ -8,9 +8,11 @@ project(EKF)
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
-  eigen
   roscpp
   rospy
+  bar30_depth
+  rti_dvl
+  imu_vn_100
 )
 
 ## System dependencies are found with CMake's conventions
@@ -149,6 +151,13 @@ include_directories(
 # target_link_libraries(${PROJECT_NAME}_node
 #   ${catkin_LIBRARIES}
 # )
+
+
+add_executable(ekf src/ekf_node.cpp)
+target_link_libraries(ekf ${catkin_LIBRARIES})
+add_dependencies(ekf EKF_generate_messages_cpp)
+add_dependencies(ekf ${catkin_EXPORTED_TARGETS})
+
 
 #############
 ## Install ##

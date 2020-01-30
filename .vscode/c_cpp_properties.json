@@ -1,27 +1,32 @@
 {
-  "configurations": [
-    {
-      "browse": {
-        "databaseFilename": "",
-        "limitSymbolsToIncludedHeaders": true
-      },
-      "includePath": [
-        "/home/ryan/Desktop/RFAL_ws/devel/include/**",
-        "/home/ryan/catkin_ws/devel/include/**",
-        "/opt/ros/melodic/include/**",
-        "/home/ryan/Desktop/RFAL_ws/src/EKF/include/**",
-        "/home/ryan/SeniorD-RMC-2019/src/apriltag_detection/include/**",
-        "/home/ryan/SeniorD-RMC-2019/src/tagslam_root/src/apriltag/apriltag_mit/include/**",
-        "/home/ryan/SeniorD-RMC-2019/src/tagslam_root/src/apriltag/apriltag_ros/include/**",
-        "/home/ryan/SeniorD-RMC-2019/src/tagslam_root/src/apriltag/apriltag_umich/include/**",
-        "/home/ryan/SeniorD-RMC-2019/src/camera_husky/include/**",
-        "/home/ryan/SeniorD-RMC-2019/src/tagslam_root/src/flex_sync/include/**",
-        "/home/ryan/Desktop/RFAL_ws/src/bluerov/imu_vn_100/include/**",
-        "/home/ryan/catkin_ws/src/learning_tf/include/**",
-        "/home/ryan/SeniorD-RMC-2019/src/tagslam_root/src/tagslam/include/**",
-        "/usr/include/**"
-      ],
-      "name": "ROS"
-    }
-  ]
+    "configurations": [
+        {
+            "browse": {
+                "databaseFilename": "",
+                "limitSymbolsToIncludedHeaders": true
+            },
+            "includePath": [
+                "/home/ryan/Desktop/RFAL_ws/devel/include/**",
+                "/home/ryan/catkin_ws/devel/include/**",
+                "/opt/ros/melodic/include/**",
+                "/home/ryan/Desktop/RFAL_ws/src/EKF/include/**",
+                "/home/ryan/SeniorD-RMC-2019/src/apriltag_detection/include/**",
+                "/home/ryan/SeniorD-RMC-2019/src/tagslam_root/src/apriltag/apriltag_mit/include/**",
+                "/home/ryan/SeniorD-RMC-2019/src/tagslam_root/src/apriltag/apriltag_ros/include/**",
+                "/home/ryan/SeniorD-RMC-2019/src/tagslam_root/src/apriltag/apriltag_umich/include/**",
+                "/home/ryan/SeniorD-RMC-2019/src/camera_husky/include/**",
+                "/home/ryan/SeniorD-RMC-2019/src/tagslam_root/src/flex_sync/include/**",
+                "/home/ryan/Desktop/RFAL_ws/src/bluerov/imu_vn_100/include/**",
+                "/home/ryan/catkin_ws/src/learning_tf/include/**",
+                "/home/ryan/SeniorD-RMC-2019/src/tagslam_root/src/tagslam/include/**",
+                "/usr/include/**"
+            ],
+            "name": "ROS",
+            "intelliSenseMode": "gcc-x64",
+            "compilerPath": "/usr/bin/gcc",
+            "cStandard": "c11",
+            "cppStandard": "c++17"
+        }
+    ],
+    "version": 4
 }
