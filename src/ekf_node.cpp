@@ -21,7 +21,7 @@ using Eigen::VectorXd;
 
 class EKF {
 private:
-	//State vector [x, y, roll, pitch, yaw, x_dot, y_dot, roll_dot, pitch_dot, yaw_dot] 
+	//State vector [x, y, z, roll, pitch, yaw, x_dot, y_dot, z_dot, roll_dot, pitch_dot, yaw_dot] 
 	VectorXd state_;
 	
 	// State covariance matrix
@@ -44,16 +44,47 @@ public:
 	// Constructor 
 	EKF()
 	{
+		// Declare state vector to be of size 12
+		state_ = VectorXd(12);
+
 		// Add all of the 10 state variables to the state vector as 0s
-		for(int i = 0; i < 10; i++)
+		for(int i = 0; i < 12; i++)
 		{
-			state_ << 0;
+			state_(i) = 0;
 		}
 		
+
+		// Declare state covariance matrix as a 12x12 matrix
+		cov_ = MatrixXd(12, 12);
+
 		// Initialize the covariance matrix with 100 0s
-		for(int i = 0; i < 10; i++)
+		for(int i = 0; i < 12; i++)
 		{
-			cov_ << 0;
+			for(int j = 0; j < 12; j++)
+			{
+				// Initialize position variables along the diagonal to have a covariance of 1
+				// The main diagonal can be represented by when i is equal to j
+				// We use i < 6 because rows 0 through 5 will be for the position variables
+				// x, y, z, roll, pitch, yaw 
+				if(i == j and i < 6)
+				{
+					cov_(i, j) = 1;
+				}
+
+				// Initialize derivate position variables along the diagonal to have a covariance of 1000
+				// Rows 6 through 11 will be for the derivatives of the positions variables
+				// x_dot, y_dot, z_dot, roll_dot, pitch_dot, yaw_dot
+				else if(i == j and i >= 6)
+				{
+					cov_(i, j) = 1000;
+				}
+				
+				// Fill the rest with 0's to start off
+				else
+				{
+					cov_(i, j) = 0;
+				}
+			}
 		}
 	}
 
@@ -135,6 +166,18 @@ public:
 		// TODO: Add the Kalman Filter update stuff for the DVL
 	}
 
+	// Prints out the current state matrix and covariance state matrix for debugging purposes
+	void printState()
+	{
+		cout << "State:" << endl;
+		cout << state_ << endl;
+
+		cout << "\n";
+
+		cout << "Covariance:" << endl;
+		cout << cov_ << endl;
+	}
+
 };
 
 
@@ -149,6 +192,8 @@ int main(int argc, char **argv)
 
 	// Create and instance of the extended Kalman Filter Object
 	EKF ekf;
+
+	ekf.printState();
 
 	// Callback function for the IMU messages
 	ros::Subscriber imu_sub = n.subscribe("/vn100/imu/raw", 100, &EKF::IMUCallback, &ekf);
