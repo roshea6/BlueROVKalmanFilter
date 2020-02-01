@@ -1,0 +1,12 @@
+int64 x
+int64 y
+int64 z
+int64 roll
+int64 pitch
+int64 yaw
+int64 x_dot
+int64 y_dot
+int64 z_dot
+int64 roll_dot
+int64 pitch_dot
+int64 yaw_dot

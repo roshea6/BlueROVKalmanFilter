@@ -13,13 +13,16 @@
 // DVL messages
 #include <rti_dvl/DVL.h>
 
+// Custom robot state message
+#include <EKF/robot_state.h>
+
 
 using std::cout;
 using std::endl;
 using Eigen::MatrixXd;
 using Eigen::VectorXd;
 
-class EKF {
+class extendedKF {
 private:
 	//State vector [x, y, z, roll, pitch, yaw, x_dot, y_dot, z_dot, roll_dot, pitch_dot, yaw_dot] 
 	VectorXd state_;
@@ -39,10 +42,14 @@ private:
 	// measurement covariance matrix
 	MatrixXd R_;
 
+	ros::NodeHandle n_;
+
+	ros::Publisher state_pub = n_.advertise<EKF::robot_state>("/state", 100);
+
 
 public:
 	// Constructor 
-	EKF()
+	extendedKF()
 	{
 		// Declare state vector to be of size 12
 		state_ = VectorXd(12);
@@ -89,7 +96,7 @@ public:
 	}
 
 	// Destuctor
-	~EKF()
+	~extendedKF()
 	{
 
 	}
@@ -107,6 +114,26 @@ public:
 
 		// Update measurement state mapping matrix H and sensor covariance matrix R
 		IMUKalmanUpdate(imu_msg); // Use the data from the IMU to update the state
+
+		// Create a robot state message
+		EKF::robot_state state;
+
+		// Populate message with garbage data for now
+		state.x = 1;
+		state.y = 1;
+		state.z = 1;
+		state.roll = 1;
+		state.pitch = 1;
+		state.yaw = 1;
+		state.x_dot = 1;
+		state.y_dot = 1;
+		state.z_dot = 1;
+		state.roll_dot = 1;
+		state.pitch_dot = 1;
+		state.yaw_dot = 1;
+
+		// Publish message
+		state_pub.publish(state);
 
 	}
 
@@ -141,6 +168,7 @@ public:
 		DVLKalmanUpdate(dvl_msg); // Use the data from the IMU to update the state
 
 	}
+	
 
 	// Predict the current state based on the previous state
 	void predict() 
@@ -165,6 +193,7 @@ public:
 	{
 		// TODO: Add the Kalman Filter update stuff for the DVL
 	}
+
 
 	// Prints out the current state matrix and covariance state matrix for debugging purposes
 	void printState()
@@ -191,18 +220,18 @@ int main(int argc, char **argv)
 	ros::NodeHandle n;
 
 	// Create and instance of the extended Kalman Filter Object
-	EKF ekf;
+	extendedKF ekf;
 
 	ekf.printState();
 
 	// Callback function for the IMU messages
-	ros::Subscriber imu_sub = n.subscribe("/vn100/imu/raw", 100, &EKF::IMUCallback, &ekf);
+	ros::Subscriber imu_sub = n.subscribe("/vn100/imu/raw", 100, &extendedKF::IMUCallback, &ekf);
 
 	// Callback function for the depth messages
-	ros::Subscriber depth_sub = n.subscribe("/bar30/depth/raw", 100, &EKF::depthCallback, &ekf);
+	ros::Subscriber depth_sub = n.subscribe("/bar30/depth/raw", 100, &extendedKF::depthCallback, &ekf);
 
 	// Callback function for the DVL messages
-	ros::Subscriber dvl_sub = n.subscribe("/rti/body_velocity/raw", 100, &EKF::DVLCallback, &ekf);
+	ros::Subscriber dvl_sub = n.subscribe("/rti/body_velocity/raw", 100, &extendedKF::DVLCallback, &ekf);
 
 	ros::spin();
 
