@@ -57,7 +57,7 @@ public:
 		// Add all of the 10 state variables to the state vector as 0s
 		for(int i = 0; i < 12; i++)
 		{
-			state_(i) = 0;
+			state_(i) = 1;
 		}
 		
 
@@ -116,24 +116,28 @@ public:
 		IMUKalmanUpdate(imu_msg); // Use the data from the IMU to update the state
 
 		// Create a robot state message
-		EKF::robot_state state;
+		EKF::robot_state state_msg;
+
+		state_(0) += 1;
+		state_(1) = state_(0) * 2;
+		state_(2) = state_(0) * .5;
 
 		// Populate message with garbage data for now
-		state.x = 1;
-		state.y = 1;
-		state.z = 1;
-		state.roll = 1;
-		state.pitch = 1;
-		state.yaw = 1;
-		state.x_dot = 1;
-		state.y_dot = 1;
-		state.z_dot = 1;
-		state.roll_dot = 1;
-		state.pitch_dot = 1;
-		state.yaw_dot = 1;
+		state_msg.x = state_(0);
+		state_msg.y = state_(1);
+		state_msg.z = state_(2);
+		state_msg.roll = 1;
+		state_msg.pitch = 1;
+		state_msg.yaw = 1;
+		state_msg.x_dot = 1;
+		state_msg.y_dot = 1;
+		state_msg.z_dot = 1;
+		state_msg.roll_dot = 1;
+		state_msg.pitch_dot = 1;
+		state_msg.yaw_dot = 1;
 
 		// Publish message
-		state_pub.publish(state);
+		state_pub.publish(state_msg);
 
 	}
 
@@ -222,6 +226,8 @@ int main(int argc, char **argv)
 	// Create and instance of the extended Kalman Filter Object
 	extendedKF ekf;
 
+	// Display the state vector and covariance matrix.
+	// TODO: Remove later. Just for debugging
 	ekf.printState();
 
 	// Callback function for the IMU messages
