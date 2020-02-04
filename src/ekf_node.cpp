@@ -104,7 +104,7 @@ public:
 	// Callback function for IMU messages from the VN 100 IMU
 	void IMUCallback(const sensor_msgs::Imu imu_msg)
 	{
-		cout << "IMU message:" << endl;
+		// cout << "IMU message:" << endl;
 		// cout << imu_msg << endl;
 
 		// Calculate dt possibly by saving timestamp from previous message
@@ -118,9 +118,13 @@ public:
 		// Create a robot state message
 		EKF::robot_state state_msg;
 
-		state_(0) += 1;
-		state_(1) = state_(0) * 2;
-		state_(2) = state_(0) * .5;
+		// Just for testing will replace with actual state data later
+		state_(0) = imu_msg.orientation.x;
+		state_(1) = imu_msg.orientation.y;
+		state_(2) = imu_msg.orientation.z;
+
+		// Set the time for the state message
+		state_msg.header.stamp = ros::Time::now();
 
 		// Populate message with garbage data for now
 		state_msg.x = state_(0);
@@ -144,8 +148,8 @@ public:
 	// Callback function for the depth messages from the bar30 Depth sensor
 	void depthCallback(const bar30_depth::Depth depth_msg)
 	{
-		cout << "Depth message:" << endl;
-		cout << depth_msg << endl;
+		// cout << "Depth message:" << endl;
+		// cout << depth_msg << endl;
 
 		// Calculate dt
 
@@ -160,8 +164,8 @@ public:
 	// Callback function for the doppler velocity logger (DVL) messages from the **** DVL
 	void DVLCallback(const rti_dvl::DVL dvl_msg)
 	{
-		cout << "DVL message:" << endl;
-		cout << dvl_msg << endl;
+		// cout << "DVL message:" << endl;
+		// cout << dvl_msg << endl;
 
 		// Calculate dt
 

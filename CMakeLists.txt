@@ -13,6 +13,7 @@ find_package(catkin REQUIRED COMPONENTS
   bar30_depth
   rti_dvl
   imu_vn_100
+  std_msgs
   message_generation
 )
 
