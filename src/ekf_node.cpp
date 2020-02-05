@@ -44,9 +44,17 @@ private:
 	// measurement covariance matrix
 	MatrixXd R_;
 
+	// Node handle for creating publishers within the class
 	ros::NodeHandle n_;
 
-	ros::Publisher state_pub = n_.advertise<EKF::robot_state>("/state", 100);
+	// Robot state publisher
+	ros::Publisher state_pub = n_.advertise<EKF::robot_state>("/raw_state", 100);
+
+	// Variable to keep track of the previous time so we can find difference between timestamps
+	float previous_timestamp_;
+
+	// Variable to keep track of if the first sensor reading has been used to initilize the state matrix
+	bool is_initialized = false;
 
 
 public:
@@ -95,6 +103,37 @@ public:
 				}
 			}
 		}
+
+		// Declare state transition matrix F
+		F_ = MatrixXd(12, 12);
+
+		// Initialize F with 1's along the diagonal and 1's in the corresponding column
+		// of position variable's derivatives
+		for(int i = 0; i < 12; i++)
+		{
+			for(int j = 0; j < 12; j++)
+			{
+				// Set all locations on the main diagonal to 1
+				if(i == j)
+				{
+					F_(i, j) = 1;
+				}
+
+				// For each row that represents a position value (rows 0 to 5) set the rowth + 5 value to 1
+				// The row index + 5 is equal to the derivative of that position variable in the state matrix
+				else if((j == i + 5) and (i < 6))
+				{
+					F_(i, j) = 1;
+				}
+
+				// Set all other values to 0
+				else
+				{
+					F_(i, j) = 0;
+				}		
+			}
+		}
+
 	}
 
 	// Destuctor
@@ -106,42 +145,66 @@ public:
 	// Callback function for IMU messages from the VN 100 IMU
 	void IMUCallback(const sensor_msgs::Imu imu_msg)
 	{
-		// cout << "IMU message:" << endl;
-		// cout << imu_msg << endl;
+		// Check if the state has been initialized with a measurement yet
+		if(!is_initialized)
+		{
+			// Populate the state matrix with the first IMU readings
+			// Take the values from the IMU message and put them in a quarternion vector
+			Quaternionf quat;
 
-		// Calculate dt possibly by saving timestamp from previous message
+			quat.x() = imu_msg.orientation.x;
+			quat.y() = imu_msg.orientation.y;
+			quat.z() = imu_msg.orientation.z;
+			quat.w() = imu_msg.orientation.w;
 
-		// Update the state transition matrix F and process noise matrix Q
+			// Get the Euler angles from the quaternion
+			Eigen::Vector3f euler = quat.toRotationMatrix().eulerAngles(0, 1, 2);
+
+			// TODO: Fully Remove this later when I'm sure the math is correct
+			// cout << "Euler angles:" << endl;
+			// cout << "\t x: " << euler(0) << endl;
+			// cout << "\t y: " << euler(1) << endl;
+			// cout << "\t z: " << euler(2) << endl;
+			// cout << endl;
+
+			// Update roll, pitch, and yaw values
+			state_(3) = euler(0); // roll
+			state_(4) = euler(1); // pitch
+			state_(5) = euler(2); // yaw
+
+			// Update derivatives of orientation variables
+			// ? Use anglular velocities from imu_msg
+
+			// Mark the state as initilized
+			is_initialized = true;
+			return;
+		}
+
+		// Calculate dt possibly
+		// TODO: Figure out why IMU messages in rosbag don't have timestamps
+		float dt = (imu_msg.header.stamp.toSec() - previous_timestamp_);
+		
+		// Update values of previous timestamp with value from latest message
+		previous_timestamp_ = imu_msg.header.stamp.toSec();
+
+		// TODO: Update the state transition matrix F
+		for(int i = 0; i < 6; i++)
+		{
+			// Update the off diagonal values for the derivatives of the position state variables
+			// with the value of how much time has passed
+			// Like before, the column index of a derivative of a position variable in the state matrix can be found by adding 5 to its index
+			F_(i, i+5) = dt;
+		}
+		
+		// TODO: Figure out how to update process noise matrix Q
+		Q_ = MatrixXd(12, 12);
+
 		predict(); // Predict the current state 
 
-		// Update measurement state mapping matrix H and sensor covariance matrix R
-		IMUKalmanUpdate(imu_msg); // Use the data from the IMU to update the state
-
+		
 		// Create a robot state message
 		EKF::robot_state state_msg;
 
-		// Take the values from the IMU message and put them in a quarternion vector
-		Quaternionf quat;
-
-		quat.x() = imu_msg.orientation.x;
-		quat.y() = imu_msg.orientation.y;
-		quat.z() = imu_msg.orientation.z;
-		quat.w() = imu_msg.orientation.w;
-
-		// Get the Euler angles from the quarternion
-		Eigen::Vector3f euler = quat.toRotationMatrix().eulerAngles(0, 1, 2);
-
-		// TODO: Fully Remove this later when I'm sure the math is correct
-		// cout << "Euler angles:" << endl;
-		// cout << "\t x: " << euler(0) << endl;
-		// cout << "\t y: " << euler(1) << endl;
-		// cout << "\t z: " << euler(2) << endl;
-		// cout << endl;
-
-		// Update roll, pitch, and yaw values
-		state_(3) = euler(0); // roll
-		state_(4) = euler(1); // pitch
-		state_(5) = euler(2); // yaw
 
 		// Set the time for the state message
 		state_msg.header.stamp = ros::Time::now();
@@ -162,6 +225,10 @@ public:
 
 		// Publish message
 		state_pub.publish(state_msg);
+
+		// Update measurement state mapping matrix H and sensor covariance matrix R
+		IMUKalmanUpdate(imu_msg); // Use the data from the IMU to update the state
+
 
 	}
 
@@ -201,7 +268,11 @@ public:
 	// Predict the current state based on the previous state
 	void predict() 
 	{
-		// TODO: Add the Kalman Filter prediction step
+		// State prediction
+		state_ = F_ * state_;
+
+		// Covariance matrix prediction
+		cov_ = F_*cov_*F_.transpose() + Q_;
 	}
 
 	// Update the state based on the predicted state and the data from the IMU
@@ -233,6 +304,11 @@ public:
 
 		cout << "Covariance:" << endl;
 		cout << cov_ << endl;
+
+		cout << "\n";
+
+		cout << "State Transition" << endl;
+		cout << F_ << endl;
 	}
 
 };
@@ -252,7 +328,7 @@ int main(int argc, char **argv)
 
 	// Display the state vector and covariance matrix.
 	// TODO: Remove later. Just for debugging
-	// ekf.printState();
+	ekf.printState();
 
 	// Callback function for the IMU messages
 	ros::Subscriber imu_sub = n.subscribe("/vn100/imu/raw", 100, &extendedKF::IMUCallback, &ekf);

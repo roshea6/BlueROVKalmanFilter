@@ -126,7 +126,7 @@ if __name__ == "__main__":
 	vis = Visualizer()
 
 	# Subscriber for robot state topic
-	rospy.Subscriber('/state', robot_state, vis.ekfStateCallback)
+	rospy.Subscriber('/raw_state', robot_state, vis.ekfStateCallback)
 
 	# TODO: Setup subsriber for raw state
 
