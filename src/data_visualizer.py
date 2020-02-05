@@ -41,12 +41,16 @@ class Visualizer(object):
 		self.fig = plt.figure()
 		self.ax1 = self.fig.add_subplot(1,1,1)
 
+		
+
+
 		# These will be replaced by more appropriately named lists later
 		self.roll_ar = []
 		self.pitch_ar = []
 		self.yaw_ar = []
 		self.time_ar = []
 
+		# Variables for setting up time to plot against
 		self.started = False
 		self.start_time = rospy.Time.now()
 
@@ -72,11 +76,12 @@ class Visualizer(object):
 		# We might not need this?
 		self.state = state_msg
 
-		# Append x and y from msg into roll_ar and pitch_ar
+		# Append values from state_msg into their proper arrays
 		self.roll_ar.append(state_msg.roll)
 		self.pitch_ar.append(state_msg.pitch)
 		self.yaw_ar.append(state_msg.yaw)
 
+		# Update time array with latest time since start
 		self.time_ar.append(state_msg.header.stamp.secs - self.start_time.secs)
 
 		
@@ -88,14 +93,26 @@ class Visualizer(object):
 		# Clear the previous data
 		self.ax1.clear()
 
-		# Plot the new points
-		self.ax1.plot(self.time_ar, self.roll_ar)
+		# Set title and lables for the plot
+		# TODO: Find a way to only have the plotted data cleared so we don't have to redo these every time
+		self.ax1.set_title('Robot orientation over time')
+		self.ax1.set_xlabel('Time (seconds)')
+		self.ax1.set_ylabel('Euler Angle Values (rads)')
 
-		# Plot x against z just to show two lines
-		self.ax1.plot(self.time_ar, self.pitch_ar)
+		# Plot roll over time
+		roll, = self.ax1.plot(self.time_ar, self.roll_ar)
+		roll.set_label("Roll") # Label the line
 
-		# Plot x against z just to show two lines
-		self.ax1.plot(self.time_ar, self.yaw_ar)
+		# Plot pitch over time
+		pitch, = self.ax1.plot(self.time_ar, self.pitch_ar)
+		pitch.set_label("Pitch") # Label the line
+
+		# Plot yaw over time
+		yaw, = self.ax1.plot(self.time_ar, self.yaw_ar)
+		yaw.set_label("Yaw") # Label the line
+
+		# Show the legend for the various lines
+		self.ax1.legend()
 
 		# TODO: Add lines for data from raw state
 
@@ -113,9 +130,12 @@ if __name__ == "__main__":
 
 	# TODO: Setup subsriber for raw state
 
-	# Set the figure to update every 1ms using the plotData function in the Visualizer class
+	# Set the figure to update every second using the plotData function in the Visualizer class
 	# The plotData function will clear the previous data and replot with any new data received
 	# from the state callback functions
+	# * interval must not update the graph faster than the rate at which data is produced or else 
+	# * the array of time data will become larger than the array of sensor data and break the graph
+	# TODO: Find a workaround for this. Possibly only add time to time array when it won't become larger than sensor data array 
 	ani = animation.FuncAnimation(vis.fig, vis.plotData, interval=1000)
 	
 	# Display the plot

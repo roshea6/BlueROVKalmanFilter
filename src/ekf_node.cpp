@@ -252,7 +252,7 @@ int main(int argc, char **argv)
 
 	// Display the state vector and covariance matrix.
 	// TODO: Remove later. Just for debugging
-	ekf.printState();
+	// ekf.printState();
 
 	// Callback function for the IMU messages
 	ros::Subscriber imu_sub = n.subscribe("/vn100/imu/raw", 100, &extendedKF::IMUCallback, &ekf);
