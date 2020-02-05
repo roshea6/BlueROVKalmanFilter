@@ -42,9 +42,13 @@ class Visualizer(object):
 		self.ax1 = self.fig.add_subplot(1,1,1)
 
 		# These will be replaced by more appropriately named lists later
-		self.xar = []
-		self.yar = []
-		self.zar = []
+		self.roll_ar = []
+		self.pitch_ar = []
+		self.yaw_ar = []
+		self.time_ar = []
+
+		self.started = False
+		self.start_time = rospy.Time.now()
 
 		# TODO: Make variables to contain data from the raw state that need to be plotted
 
@@ -57,16 +61,25 @@ class Visualizer(object):
 
 	# Recieves messages from the EKF node about the latest state
 	def ekfStateCallback(self, state_msg):
-		print state_msg
+		# print state_msg
+
+		# Get the start time to make graphing look better
+		if(self.started == False):
+			self.start_time = rospy.Time.now()
+			self.started = True
 
 		# Update state with new message
 		# We might not need this?
 		self.state = state_msg
 
-		# Append x and y from msg into xar and yar
-		self.xar.append(state_msg.x)
-		self.yar.append(state_msg.y)
-		self.zar.append(state_msg.z)
+		# Append x and y from msg into roll_ar and pitch_ar
+		self.roll_ar.append(state_msg.roll)
+		self.pitch_ar.append(state_msg.pitch)
+		self.yaw_ar.append(state_msg.yaw)
+
+		self.time_ar.append(state_msg.header.stamp.secs - self.start_time.secs)
+
+		
 
 
 
@@ -76,10 +89,13 @@ class Visualizer(object):
 		self.ax1.clear()
 
 		# Plot the new points
-		self.ax1.plot(self.xar, self.yar)
+		self.ax1.plot(self.time_ar, self.roll_ar)
 
 		# Plot x against z just to show two lines
-		self.ax1.plot(self.xar, self.zar)
+		self.ax1.plot(self.time_ar, self.pitch_ar)
+
+		# Plot x against z just to show two lines
+		self.ax1.plot(self.time_ar, self.yaw_ar)
 
 		# TODO: Add lines for data from raw state
 
@@ -100,7 +116,7 @@ if __name__ == "__main__":
 	# Set the figure to update every 1ms using the plotData function in the Visualizer class
 	# The plotData function will clear the previous data and replot with any new data received
 	# from the state callback functions
-	ani = animation.FuncAnimation(vis.fig, vis.plotData, interval=1)
+	ani = animation.FuncAnimation(vis.fig, vis.plotData, interval=1000)
 	
 	# Display the plot
 	plt.show()

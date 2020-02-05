@@ -21,10 +21,12 @@ using std::cout;
 using std::endl;
 using Eigen::MatrixXd;
 using Eigen::VectorXd;
+using Eigen::Quaternionf;
 
 class extendedKF {
 private:
 	//State vector [x, y, z, roll, pitch, yaw, x_dot, y_dot, z_dot, roll_dot, pitch_dot, yaw_dot] 
+	// Numbered    [0, 1, 2, 3,    4,     5,   6,     7,     8,     9,        10,        11]
 	VectorXd state_;
 	
 	// State covariance matrix
@@ -118,10 +120,28 @@ public:
 		// Create a robot state message
 		EKF::robot_state state_msg;
 
-		// Just for testing will replace with actual state data later
-		state_(0) = imu_msg.orientation.x;
-		state_(1) = imu_msg.orientation.y;
-		state_(2) = imu_msg.orientation.z;
+		// Take the values from the IMU message and put them in a quarternion vector
+		Quaternionf quat;
+
+		quat.x() = imu_msg.orientation.x;
+		quat.y() = imu_msg.orientation.y;
+		quat.z() = imu_msg.orientation.z;
+		quat.w() = imu_msg.orientation.w;
+
+		// Get the Euler angles from the quarternion
+		Eigen::Vector3f euler = quat.toRotationMatrix().eulerAngles(0, 1, 2);
+
+		// TODO: Fully Remove this later when I'm sure the math is correct
+		// cout << "Euler angles:" << endl;
+		// cout << "\t x: " << euler(0) << endl;
+		// cout << "\t y: " << euler(1) << endl;
+		// cout << "\t z: " << euler(2) << endl;
+		// cout << endl;
+
+		// Update roll, pitch, and yaw values
+		state_(3) = euler(0); // roll
+		state_(4) = euler(1); // pitch
+		state_(5) = euler(2); // yaw
 
 		// Set the time for the state message
 		state_msg.header.stamp = ros::Time::now();
@@ -130,9 +150,9 @@ public:
 		state_msg.x = state_(0);
 		state_msg.y = state_(1);
 		state_msg.z = state_(2);
-		state_msg.roll = 1;
-		state_msg.pitch = 1;
-		state_msg.yaw = 1;
+		state_msg.roll = state_(3);
+		state_msg.pitch = state_(4);
+		state_msg.yaw = state_(5);
 		state_msg.x_dot = 1;
 		state_msg.y_dot = 1;
 		state_msg.z_dot = 1;
