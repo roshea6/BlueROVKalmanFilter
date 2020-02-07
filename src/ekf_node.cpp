@@ -38,23 +38,35 @@ private:
 	// process covariance matrix
 	MatrixXd Q_;
 
-	// measurement matrix
-	MatrixXd H_;
+	// IMU measurement matrix
+	MatrixXd H_IMU_;
 
-	// measurement covariance matrix
-	MatrixXd R_;
+	// Depth measurement matrx
+	MatrixXd H_depth_;
+
+	// DVL measurement matrix
+	MatrixXd H_DVL_;
+
+	// IMU measurement covariance matrix
+	MatrixXd R_IMU_;
+
+	// Depth measurement covariance matrix
+	MatrixXd R_depth_;
+
+	// DVL measurement covariance matrix
+	MatrixXd R_DVL_;
 
 	// Node handle for creating publishers within the class
 	ros::NodeHandle n_;
 
 	// Robot state publisher
-	ros::Publisher state_pub = n_.advertise<EKF::robot_state>("/raw_state", 100);
+	ros::Publisher state_pub_ = n_.advertise<EKF::robot_state>("/raw_state", 100);
 
 	// Variable to keep track of the previous time so we can find difference between timestamps
 	float previous_timestamp_;
 
 	// Variable to keep track of if the first sensor reading has been used to initilize the state matrix
-	bool is_initialized = false;
+	bool is_initialized_ = false;
 
 
 public:
@@ -120,8 +132,8 @@ public:
 				}
 
 				// For each row that represents a position value (rows 0 to 5) set the rowth + 5 value to 1
-				// The row index + 5 is equal to the derivative of that position variable in the state matrix
-				else if((j == i + 5) and (i < 6))
+				// The row index + 6 is equal to the derivative of that position variable in the state matrix
+				else if((j == i + 6) and (i < 6))
 				{
 					F_(i, j) = 1;
 				}
@@ -132,6 +144,27 @@ public:
 					F_(i, j) = 0;
 				}		
 			}
+		}
+
+		// Initialize IMU measurement matrix
+		H_IMU_ = MatrixXd(6, 12);
+
+		// Zero out the whole matrix to start
+		H_IMU_.setZero();
+
+		for(int i = 0; i < 6; i++)
+		{
+			// Fill in roll, pitch and yaw values
+			if(i < 3)
+			{
+				H_IMU_(i, i+3) = 1; // Use +3 to fill in places for roll, pitch, yaw instead of x, y, z
+			}
+
+			// Fill in roll_dot, pitch_dot and yaw_dot values
+			else
+			{
+				H_IMU_(i, i+6) = 1; // Use +6 to fill in places for roll_dot, pithch_dot, yaw_dot instead of roll, pitch, yaw
+			}	
 		}
 
 	}
@@ -146,7 +179,7 @@ public:
 	void IMUCallback(const sensor_msgs::Imu imu_msg)
 	{
 		// Check if the state has been initialized with a measurement yet
-		if(!is_initialized)
+		if(!is_initialized_)
 		{
 			// Populate the state matrix with the first IMU readings
 			// Take the values from the IMU message and put them in a quarternion vector
@@ -174,9 +207,12 @@ public:
 
 			// Update derivatives of orientation variables
 			// ? Use anglular velocities from imu_msg
+			state_(9) = imu_msg.angular_velocity.x; // roll_dot
+			state_(10) = imu_msg.angular_velocity.y; // pitch_dot
+			state_(11) = imu_msg.angular_velocity.z; // yaw_dot
 
 			// Mark the state as initilized
-			is_initialized = true;
+			is_initialized_ = true;
 			return;
 		}
 
@@ -192,8 +228,8 @@ public:
 		{
 			// Update the off diagonal values for the derivatives of the position state variables
 			// with the value of how much time has passed
-			// Like before, the column index of a derivative of a position variable in the state matrix can be found by adding 5 to its index
-			F_(i, i+5) = dt;
+			// Like before, the column index of a derivative of a position variable in the state matrix can be found by adding 6 to its index
+			F_(i, i+6) = dt;
 		}
 		
 		// TODO: Figure out how to update process noise matrix Q
@@ -224,7 +260,7 @@ public:
 		state_msg.yaw_dot = 1;
 
 		// Publish message
-		state_pub.publish(state_msg);
+		state_pub_.publish(state_msg);
 
 		// Update measurement state mapping matrix H and sensor covariance matrix R
 		IMUKalmanUpdate(imu_msg); // Use the data from the IMU to update the state
@@ -299,16 +335,19 @@ public:
 	{
 		cout << "State:" << endl;
 		cout << state_ << endl;
-
 		cout << "\n";
 
 		cout << "Covariance:" << endl;
 		cout << cov_ << endl;
-
 		cout << "\n";
 
 		cout << "State Transition" << endl;
 		cout << F_ << endl;
+		cout << "\n";
+
+		cout << "IMU H Matrix" << endl;
+		cout << H_IMU_ << endl;
+		cout << "\n";
 	}
 
 };
