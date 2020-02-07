@@ -79,7 +79,7 @@ public:
 		// Add all of the 10 state variables to the state vector as 0s
 		for(int i = 0; i < 12; i++)
 		{
-			state_(i) = 1;
+			state_(i) = 0;
 		}
 		
 
@@ -167,6 +167,12 @@ public:
 			}	
 		}
 
+		// TODO: Initialize the IMU measurement covairance matrix
+		R_IMU_ = MatrixXd(6, 6);
+
+		// ? Zero out for now 
+		R_IMU_.setZero();
+
 	}
 
 	// Destuctor
@@ -229,18 +235,22 @@ public:
 			// Update the off diagonal values for the derivatives of the position state variables
 			// with the value of how much time has passed
 			// Like before, the column index of a derivative of a position variable in the state matrix can be found by adding 6 to its index
-			F_(i, i+6) = dt;
+			F_(i, i+6) = .005; // TODO: Change this from 1 to dt
 		}
 		
 		// TODO: Figure out how to update process noise matrix Q
 		Q_ = MatrixXd(12, 12);
 
+		Q_.setZero();
+
 		predict(); // Predict the current state 
 
-		
+
+		// Update measurement state mapping matrix H and sensor covariance matrix R
+		// IMUKalmanUpdate(imu_msg); // Use the data from the IMU to update the state
+
 		// Create a robot state message
 		EKF::robot_state state_msg;
-
 
 		// Set the time for the state message
 		state_msg.header.stamp = ros::Time::now();
@@ -252,20 +262,15 @@ public:
 		state_msg.roll = state_(3);
 		state_msg.pitch = state_(4);
 		state_msg.yaw = state_(5);
-		state_msg.x_dot = 1;
-		state_msg.y_dot = 1;
-		state_msg.z_dot = 1;
-		state_msg.roll_dot = 1;
-		state_msg.pitch_dot = 1;
-		state_msg.yaw_dot = 1;
+		state_msg.x_dot = state_(6);
+		state_msg.y_dot = state_(7);
+		state_msg.z_dot = state_(8);
+		state_msg.roll_dot = state_(9);
+		state_msg.pitch_dot = state_(10);
+		state_msg.yaw_dot = state_(11);
 
 		// Publish message
 		state_pub_.publish(state_msg);
-
-		// Update measurement state mapping matrix H and sensor covariance matrix R
-		IMUKalmanUpdate(imu_msg); // Use the data from the IMU to update the state
-
-
 	}
 
 	// Callback function for the depth messages from the bar30 Depth sensor
@@ -304,17 +309,65 @@ public:
 	// Predict the current state based on the previous state
 	void predict() 
 	{
+		cout << "Start predict" << endl;
+		printState();
+
 		// State prediction
 		state_ = F_ * state_;
 
 		// Covariance matrix prediction
 		cov_ = F_*cov_*F_.transpose() + Q_;
+
+		cout << "End predict" << endl;
+		printState();
 	}
 
 	// Update the state based on the predicted state and the data from the IMU
 	void IMUKalmanUpdate(const sensor_msgs::Imu imu_msg)
 	{
+		cout << "Start update" << endl;
+		printState();
+
 		// TODO: Add the Kalman Filter update stuff for the IMU
+		// Take the values from the IMU message and put them in a quarternion vector
+		Quaternionf quat;
+
+		quat.x() = imu_msg.orientation.x;
+		quat.y() = imu_msg.orientation.y;
+		quat.z() = imu_msg.orientation.z;
+		quat.w() = imu_msg.orientation.w;
+
+		// Get the Euler angles from the quaternion
+		Eigen::Vector3f euler = quat.toRotationMatrix().eulerAngles(0, 1, 2);
+
+		// Fill measurement vector z with roll, pitch, yaw, and derivatives values
+		VectorXd z(6);
+
+		// Put values into the vector
+		z << euler(0), euler(1), euler(2), // roll, pitch, yaw
+			 imu_msg.angular_velocity.x, // roll_dot
+			 imu_msg.angular_velocity.y, // pitch_dot
+			 imu_msg.angular_velocity.z; // yaw_dot
+
+		VectorXd y = z - H_IMU_ * state_; // Measurement error
+
+		// cout << "y" << endl;
+		// cout << y << endl;
+
+		MatrixXd S = H_IMU_ * cov_ * H_IMU_.transpose() + R_IMU_;
+		MatrixXd K = cov_ * H_IMU_.transpose() * S.inverse(); // Kalman gain
+
+		// Get new state
+		state_ = state_ + K*y;
+
+		// Create identity matrix and use it to update state covariance matrix
+		MatrixXd I = MatrixXd::Identity(state_.size(), state_.size());
+
+		cov_ = (I - K*H_IMU_)*cov_;
+
+		cout << "End update" << endl;
+		printState();
+
 	}
 
 	// Update the state based on the predicted state and the data from the Depth sensor
@@ -341,13 +394,13 @@ public:
 		cout << cov_ << endl;
 		cout << "\n";
 
-		cout << "State Transition" << endl;
-		cout << F_ << endl;
-		cout << "\n";
+		// cout << "State Transition" << endl;
+		// cout << F_ << endl;
+		// cout << "\n";
 
-		cout << "IMU H Matrix" << endl;
-		cout << H_IMU_ << endl;
-		cout << "\n";
+		// cout << "IMU H Matrix" << endl;
+		// cout << H_IMU_ << endl;
+		// cout << "\n";
 	}
 
 };
