@@ -3,6 +3,7 @@
 #include <iostream>
 #include "Eigen/Dense"
 #include "ros/ros.h"
+#include <math.h>
 
 // IMU messages
 #include <sensor_msgs/Imu.h>
@@ -59,8 +60,10 @@ private:
 	// Node handle for creating publishers within the class
 	ros::NodeHandle n_;
 
-	// Robot state publisher
-	ros::Publisher state_pub_ = n_.advertise<EKF::robot_state>("/raw_state", 100);
+	// VectorNav Robot state publisher
+	ros::Publisher vn_state_pub_ = n_.advertise<EKF::robot_state>("/vn_state", 100);
+
+	ros::Publisher our_state_pub_ = n_.advertise<EKF::robot_state>("/our_state", 100);
 
 	// Variable to keep track of the previous time so we can find difference between timestamps
 	float previous_timestamp_;
@@ -170,9 +173,20 @@ public:
 		// TODO: Initialize the IMU measurement covairance matrix
 		R_IMU_ = MatrixXd(6, 6);
 
-		// ? Zero out for now 
-		R_IMU_.setZero();
+		for(int i = 0; i < 6; i++)
+		{
+			// Gyro noise for angular velocity
+			if(i < 3)
+			{
+				R_IMU_(i, i) = .0035;
+			}
 
+			// Accelerometer noise for linear acceleration
+			else
+			{
+				R_IMU_(i, i) = .14;
+			}			
+		}
 	}
 
 	// Destuctor
@@ -189,15 +203,15 @@ public:
 		{
 			// Populate the state matrix with the first IMU readings
 			// Take the values from the IMU message and put them in a quarternion vector
-			Quaternionf quat;
+			// Quaternionf quat;
 
-			quat.x() = imu_msg.orientation.x;
-			quat.y() = imu_msg.orientation.y;
-			quat.z() = imu_msg.orientation.z;
-			quat.w() = imu_msg.orientation.w;
+			// quat.x() = imu_msg.orientation.x;
+			// quat.y() = imu_msg.orientation.y;
+			// quat.z() = imu_msg.orientation.z;
+			// quat.w() = imu_msg.orientation.w;
 
-			// Get the Euler angles from the quaternion
-			Eigen::Vector3f euler = quat.toRotationMatrix().eulerAngles(0, 1, 2);
+			// // Get the Euler angles from the quaternion
+			// Eigen::Vector3f euler = quat.toRotationMatrix().eulerAngles(0, 1, 2);
 
 			// TODO: Fully Remove this later when I'm sure the math is correct
 			// cout << "Euler angles:" << endl;
@@ -207,12 +221,31 @@ public:
 			// cout << endl;
 
 			// Update roll, pitch, and yaw values
-			state_(3) = euler(0); // roll
-			state_(4) = euler(1); // pitch
-			state_(5) = euler(2); // yaw
+			// state_(3) = euler(0); // roll
+			// state_(4) = euler(1); // pitch
+			// state_(5) = euler(2); // yaw
+
+			// Calclate roll, pitch and yaw from the linear acceleration values
+			// Temporary variables just to make calculations cleaner
+			float accel_x = imu_msg.linear_acceleration.x;
+			float accel_y = imu_msg.linear_acceleration.y;
+			float accel_z = imu_msg.linear_acceleration.z;
+
+			// Find roll in radians
+			float roll = atan2(accel_y, sqrt(accel_x*accel_x + accel_z*accel_z));
+
+			// Find pitch in radians
+			float pitch = atan2(accel_x, sqrt(accel_y*accel_y + accel_z*accel_z));
+
+			// Find yaw in radians
+			float yaw = atan2(accel_z, sqrt(accel_x*accel_x + accel_z*accel_z));
+
+			// Update roll, pitch, and yaw values
+			state_(3) = roll; 
+			state_(4) = pitch;
+			state_(5) = yaw;
 
 			// Update derivatives of orientation variables
-			// ? Use anglular velocities from imu_msg
 			state_(9) = imu_msg.angular_velocity.x; // roll_dot
 			state_(10) = imu_msg.angular_velocity.y; // pitch_dot
 			state_(11) = imu_msg.angular_velocity.z; // yaw_dot
@@ -243,11 +276,31 @@ public:
 
 		Q_.setZero();
 
-		predict(); // Predict the current state 
+		// predict(); // Predict the current state 
 
 
 		// Update measurement state mapping matrix H and sensor covariance matrix R
 		// IMUKalmanUpdate(imu_msg); // Use the data from the IMU to update the state
+
+
+		// TODO: REMOVE THIS LATER IT'S JUST FOR TESTING VN STATE
+		// Populate the state matrix with the first IMU readings
+		// Take the values from the IMU message and put them in a quarternion vector
+		Quaternionf quat;
+
+		quat.x() = imu_msg.orientation.x;
+		quat.y() = imu_msg.orientation.y;
+		quat.z() = imu_msg.orientation.z;
+		quat.w() = imu_msg.orientation.w;
+
+		// Get the Euler angles from the quaternion
+		Eigen::Vector3f euler = quat.toRotationMatrix().eulerAngles(0, 1, 2);
+
+		// Update roll, pitch, and yaw values
+		state_(3) = euler(0); // roll
+		state_(4) = euler(1); // pitch
+		state_(5) = euler(2); // yaw
+		// TODO: REMOVE THIS LATER IT'S JUST FOR TESTING
 
 		// Create a robot state message
 		EKF::robot_state state_msg;
@@ -270,7 +323,36 @@ public:
 		state_msg.yaw_dot = state_(11);
 
 		// Publish message
-		state_pub_.publish(state_msg);
+		vn_state_pub_.publish(state_msg);
+
+		// TODO: REMOVE THIS LATER IT'S JUST FOR TESTING OUR STATE
+		EKF::robot_state our_state;
+
+		// Set the timestamp for the message
+		our_state.header.stamp = state_msg.header.stamp;
+
+		// Calclate roll, pitch and yaw from the linear acceleration values
+		// Temporary variables just to make calculations cleaner
+		float accel_x = imu_msg.linear_acceleration.x;
+		float accel_y = imu_msg.linear_acceleration.y;
+		float accel_z = imu_msg.linear_acceleration.z;
+
+		// Find roll in radians
+		float roll = atan2(accel_y, sqrt(accel_x*accel_x + accel_z*accel_z));
+
+		// Find pitch in radians
+		float pitch = atan2(accel_x, sqrt(accel_y*accel_y + accel_z*accel_z));
+
+		// Find yaw in radians
+		float yaw = atan2(accel_z, sqrt(accel_x*accel_x + accel_z*accel_z));
+
+		// Update roll, pitch, and yaw values
+		our_state.roll = roll; 
+		our_state.pitch = pitch;
+		our_state.yaw = yaw;
+
+		our_state_pub_.publish(our_state);
+		// TODO: REMOVE THIS LATER IT'S JUST FOR TESTING OUR STATE
 	}
 
 	// Callback function for the depth messages from the bar30 Depth sensor
@@ -282,7 +364,7 @@ public:
 		// Calculate dt
 
 		// Update the state transition matrix F and process noise matrix Q
-		predict(); // Predict the current state 
+		// predict(); // Predict the current state 
 
 		// Update measurement state mapping matrix H and sensor covariance matrix R
 		depthKalmanUpdate(depth_msg); // Use the data from the IMU to update the state
@@ -298,7 +380,7 @@ public:
 		// Calculate dt
 
 		// Update the state transition matrix F and process noise matrix Q
-		predict(); // Predict the current state 
+		// predict(); // Predict the current state 
 
 		// Update measurement state mapping matrix H and sensor covariance matrix R
 		DVLKalmanUpdate(dvl_msg); // Use the data from the IMU to update the state
@@ -323,6 +405,7 @@ public:
 	}
 
 	// Update the state based on the predicted state and the data from the IMU
+	// TODO: Figure out what part of the update step is causing the state and covariance matrix to all become NaN
 	void IMUKalmanUpdate(const sensor_msgs::Imu imu_msg)
 	{
 		cout << "Start update" << endl;

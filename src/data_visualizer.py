@@ -38,13 +38,11 @@ class Visualizer(object):
 		self.state.yaw_dot = 1
 
 		# Variables to be used for the plot
-		self.fig = plt.figure()
-		self.ax1 = self.fig.add_subplot(1,1,1)
+		self.fig, (self.ax1, self.ax2) = plt.subplots(2,1)
+		# self.ax1 = self.fig.add_subplot(1,1,1)
+		# self.ax2 = self.fig.add_subplot(2,1,1)
 
-		
-
-
-		# These will be replaced by more appropriately named lists later
+		# Lists for holding values from our state messages
 		self.roll_ar = []
 		self.pitch_ar = []
 		self.yaw_ar = []
@@ -54,14 +52,32 @@ class Visualizer(object):
 		self.started = False
 		self.start_time = rospy.Time.now()
 
-		# TODO: Make variables to contain data from the raw state that need to be plotted
+		# Lists for holding data from vn IMU messages
+		self.vn_roll_ar = []
+		self.vn_pitch_ar = []
+		self.vn_yaw_ar = []
+		self.vn_time_ar = []
+
+		# Variables for setting up time to plot against
+		self.vn_started = False
+		self.vn_start_time = rospy.Time.now()
 
 
 	# Recieves messages directly from the IMU topic and plots it
-	def rawStateCallback(self, imu_msg):
-		pass
+	def vnStateCallback(self, imu_msg):
+		# Get the start time to make graphing look better
+		if(self.vn_started == False):
+			self.vn_start_time = rospy.Time.now()
+			self.vn_started = True
 
-		# TODO: Add raw state data to proper variable
+		# Append values from state_msg into their proper arrays
+		self.vn_roll_ar.append(imu_msg.roll)
+		self.vn_pitch_ar.append(imu_msg.pitch)
+		self.vn_yaw_ar.append(imu_msg.yaw)
+
+		# Update time array with latest time since start
+		self.vn_time_ar.append(imu_msg.header.stamp.secs - self.vn_start_time.secs)
+
 
 	# Recieves messages from the EKF node about the latest state
 	def ekfStateCallback(self, state_msg):
@@ -96,7 +112,7 @@ class Visualizer(object):
 		# Set title and lables for the plot
 		# TODO: Find a way to only have the plotted data cleared so we don't have to redo these every time
 		self.ax1.set_title('Robot orientation over time')
-		self.ax1.set_xlabel('Time (seconds)')
+		# self.ax1.set_xlabel('Time (seconds)')
 		self.ax1.set_ylabel('Euler Angle Values (rads)')
 
 		# Plot roll over time
@@ -114,7 +130,29 @@ class Visualizer(object):
 		# Show the legend for the various lines
 		self.ax1.legend()
 
-		# TODO: Add lines for data from raw state
+		# Plot for IMU data
+		self.ax2.clear()
+
+		self.ax2.set_title('IMU orientation over time')
+		self.ax2.set_xlabel('Time (seconds)')
+		self.ax2.set_ylabel('Euler Angle Values (rads)')
+
+		# Plot roll over time
+		roll, = self.ax2.plot(self.vn_time_ar, self.vn_roll_ar)
+		roll.set_label("Roll") # Label the line
+
+		# Plot pitch over time
+		pitch, = self.ax2.plot(self.vn_time_ar, self.vn_pitch_ar)
+		pitch.set_label("Pitch") # Label the line
+
+		# Plot yaw over time
+		yaw, = self.ax2.plot(self.vn_time_ar, self.vn_yaw_ar)
+		yaw.set_label("Yaw") # Label the line
+
+		# Show the legend for the various lines
+		self.ax2.legend()
+
+
 
 
 
@@ -125,8 +163,11 @@ if __name__ == "__main__":
 	# Visualizer object which will be used to keep track of the robot state and plot it
 	vis = Visualizer()
 
-	# Subscriber for robot state topic
-	rospy.Subscriber('/raw_state', robot_state, vis.ekfStateCallback)
+	# Subscriber for our robot state topic
+	rospy.Subscriber('/our_state', robot_state, vis.ekfStateCallback)
+
+	# Subscriber for robot state from pure IMU data
+	rospy.Subscriber('/vn_state', robot_state, vis.vnStateCallback)
 
 	# TODO: Setup subsriber for raw state
 
