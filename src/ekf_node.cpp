@@ -201,30 +201,6 @@ public:
 		// Check if the state has been initialized with a measurement yet
 		if(!is_initialized_)
 		{
-			// Populate the state matrix with the first IMU readings
-			// Take the values from the IMU message and put them in a quarternion vector
-			// Quaternionf quat;
-
-			// quat.x() = imu_msg.orientation.x;
-			// quat.y() = imu_msg.orientation.y;
-			// quat.z() = imu_msg.orientation.z;
-			// quat.w() = imu_msg.orientation.w;
-
-			// // Get the Euler angles from the quaternion
-			// Eigen::Vector3f euler = quat.toRotationMatrix().eulerAngles(0, 1, 2);
-
-			// TODO: Fully Remove this later when I'm sure the math is correct
-			// cout << "Euler angles:" << endl;
-			// cout << "\t x: " << euler(0) << endl;
-			// cout << "\t y: " << euler(1) << endl;
-			// cout << "\t z: " << euler(2) << endl;
-			// cout << endl;
-
-			// Update roll, pitch, and yaw values
-			// state_(3) = euler(0); // roll
-			// state_(4) = euler(1); // pitch
-			// state_(5) = euler(2); // yaw
-
 			// Calclate roll, pitch and yaw from the linear acceleration values
 			// Temporary variables just to make calculations cleaner
 			float accel_x = imu_msg.linear_acceleration.x;
@@ -232,10 +208,10 @@ public:
 			float accel_z = imu_msg.linear_acceleration.z;
 
 			// Find roll in radians
-			float roll = atan2(accel_y, sqrt(accel_x*accel_x + accel_z*accel_z));
+			float roll = atan2(accel_y, accel_z);
 
 			// Find pitch in radians
-			float pitch = atan2(accel_x, sqrt(accel_y*accel_y + accel_z*accel_z));
+			float pitch = atan2(-accel_x, sqrt(accel_y*accel_y + accel_z*accel_z));
 
 			// Find yaw in radians
 			float yaw = atan2(accel_z, sqrt(accel_x*accel_x + accel_z*accel_z));
@@ -286,20 +262,34 @@ public:
 		// TODO: REMOVE THIS LATER IT'S JUST FOR TESTING VN STATE
 		// Populate the state matrix with the first IMU readings
 		// Take the values from the IMU message and put them in a quarternion vector
-		Quaternionf quat;
+		// Quaternionf quat;
 
-		quat.x() = imu_msg.orientation.x;
-		quat.y() = imu_msg.orientation.y;
-		quat.z() = imu_msg.orientation.z;
-		quat.w() = imu_msg.orientation.w;
+		// quat.x() = imu_msg.orientation.x;
+		// quat.y() = imu_msg.orientation.y;
+		// quat.z() = imu_msg.orientation.z;
+		// quat.w() = imu_msg.orientation.w;
 
-		// Get the Euler angles from the quaternion
-		Eigen::Vector3f euler = quat.toRotationMatrix().eulerAngles(0, 1, 2);
+		// // Get the Euler angles from the quaternion
+		// Eigen::Vector3f euler = quat.toRotationMatrix().eulerAngles(2, 1, 0);
 
-		// Update roll, pitch, and yaw values
-		state_(3) = euler(0); // roll
-		state_(4) = euler(1); // pitch
-		state_(5) = euler(2); // yaw
+		// // Update roll, pitch, and yaw values
+		// state_(3) = euler(0); // roll
+		// state_(4) = euler(1); // pitch
+		// state_(5) = euler(2); // yaw
+
+		// Put quaternion values from message into easier to use values
+		float q_x = imu_msg.orientation.x;
+		float q_y = imu_msg.orientation.y;
+		float q_z = imu_msg.orientation.z;
+		float q_w = imu_msg.orientation.w;
+
+		// Convert into roll, pitch, and yaw
+		// These conversions are take directly from the VectorNav Quaternion math guide 
+		// https://www.vectornav.com/docs/default-source/documentation/vn-100-documentation/AN002.pdf?sfvrsn=19ee6b9_13
+		float imu_yaw = atan2(2*(q_x*q_y + q_w*q_z), q_w*q_w - q_z*q_z - q_y*q_y + q_x*q_x);
+		float imu_pitch = asin(-2*(q_x*q_z - q_y*q_w));
+		float imu_roll = atan2(2*(q_y*q_z + q_x*q_w), q_w*q_w + q_z*q_z - q_y*q_y - q_x*q_x);
+
 		// TODO: REMOVE THIS LATER IT'S JUST FOR TESTING
 
 		// Create a robot state message
@@ -312,9 +302,9 @@ public:
 		state_msg.x = state_(0);
 		state_msg.y = state_(1);
 		state_msg.z = state_(2);
-		state_msg.roll = state_(3);
-		state_msg.pitch = state_(4);
-		state_msg.yaw = state_(5);
+		state_msg.roll = imu_roll;
+		state_msg.pitch = imu_pitch;
+		state_msg.yaw = imu_yaw;
 		state_msg.x_dot = state_(6);
 		state_msg.y_dot = state_(7);
 		state_msg.z_dot = state_(8);
@@ -338,10 +328,10 @@ public:
 		float accel_z = imu_msg.linear_acceleration.z;
 
 		// Find roll in radians
-		float roll = atan2(accel_y, sqrt(accel_x*accel_x + accel_z*accel_z));
+		float roll = atan2(accel_y, accel_z);
 
 		// Find pitch in radians
-		float pitch = atan2(accel_x, sqrt(accel_y*accel_y + accel_z*accel_z));
+		float pitch = atan2(-accel_x, sqrt(accel_y*accel_y + accel_z*accel_z));
 
 		// Find yaw in radians
 		float yaw = atan2(accel_z, sqrt(accel_x*accel_x + accel_z*accel_z));
