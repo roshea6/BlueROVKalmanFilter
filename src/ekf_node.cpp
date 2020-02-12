@@ -89,7 +89,7 @@ public:
 		// Declare state covariance matrix as a 12x12 matrix
 		cov_ = MatrixXd(12, 12);
 
-		// Initialize the covariance matrix with 100 0s
+		// Initialize the covariance matrix
 		for(int i = 0; i < 12; i++)
 		{
 			for(int j = 0; j < 12; j++)
@@ -175,17 +175,51 @@ public:
 
 		for(int i = 0; i < 6; i++)
 		{
+			// ? Try setting these to just being the same value
 			// Gyro noise for angular velocity
 			if(i < 3)
 			{
-				R_IMU_(i, i) = .0035;
+				R_IMU_(i, i) = .1;
 			}
 
 			// Accelerometer noise for linear acceleration
 			else
 			{
-				R_IMU_(i, i) = .14;
+				R_IMU_(i, i) = .1;
 			}			
+		}
+
+		// ? Try using an identity matrix for this
+		Q_ = MatrixXd(12, 12);
+
+		// Initialize the process noise matrix
+		for(int i = 0; i < 12; i++)
+		{
+			for(int j = 0; j < 12; j++)
+			{
+				// Initialize position variables along the diagonal to have a covariance of 1
+				// The main diagonal can be represented by when i is equal to j
+				// We use i < 6 because rows 0 through 5 will be for the position variables
+				// x, y, z, roll, pitch, yaw 
+				if(i == j and i < 6)
+				{
+					Q_(i, j) = .005;
+				}
+
+				// Initialize derivate position variables along the diagonal to have a covariance of 1000
+				// Rows 6 through 11 will be for the derivatives of the positions variables
+				// x_dot, y_dot, z_dot, roll_dot, pitch_dot, yaw_dot
+				else if(i == j and i >= 6)
+				{
+					Q_(i, j) = 5;
+				}
+				
+				// Fill the rest with 0's to start off
+				else
+				{
+					cov_(i, j) = 0;
+				}
+			}
 		}
 	}
 
@@ -199,6 +233,7 @@ public:
 	void IMUCallback(const sensor_msgs::Imu imu_msg)
 	{
 		// Check if the state has been initialized with a measurement yet
+		// ! Might be a good idea to just remove this and leave the initial state as all 0's
 		if(!is_initialized_)
 		{
 			// Calclate roll, pitch and yaw from the linear acceleration values
@@ -233,6 +268,8 @@ public:
 
 		// Calculate dt possibly
 		// TODO: Figure out why IMU messages in rosbag don't have timestamps
+		// TODO: dt for Kalman should be fixed
+		// ? Try making dt a constant of 1/200 to match rate for IMU publishing frequency
 		float dt = (imu_msg.header.stamp.toSec() - previous_timestamp_);
 		
 		// Update values of previous timestamp with value from latest message
@@ -247,36 +284,15 @@ public:
 			F_(i, i+6) = .005; // TODO: Change this from 1 to dt
 		}
 		
-		// TODO: Figure out how to update process noise matrix Q
-		Q_ = MatrixXd(12, 12);
 
-		Q_.setZero();
-
-		// predict(); // Predict the current state 
+		predict(); // Predict the current state 
 
 
 		// Update measurement state mapping matrix H and sensor covariance matrix R
-		// IMUKalmanUpdate(imu_msg); // Use the data from the IMU to update the state
+		IMUKalmanUpdate(imu_msg); // Use the data from the IMU to update the state
 
 
 		// TODO: REMOVE THIS LATER IT'S JUST FOR TESTING VN STATE
-		// Populate the state matrix with the first IMU readings
-		// Take the values from the IMU message and put them in a quarternion vector
-		// Quaternionf quat;
-
-		// quat.x() = imu_msg.orientation.x;
-		// quat.y() = imu_msg.orientation.y;
-		// quat.z() = imu_msg.orientation.z;
-		// quat.w() = imu_msg.orientation.w;
-
-		// // Get the Euler angles from the quaternion
-		// Eigen::Vector3f euler = quat.toRotationMatrix().eulerAngles(2, 1, 0);
-
-		// // Update roll, pitch, and yaw values
-		// state_(3) = euler(0); // roll
-		// state_(4) = euler(1); // pitch
-		// state_(5) = euler(2); // yaw
-
 		// Put quaternion values from message into easier to use values
 		float q_x = imu_msg.orientation.x;
 		float q_y = imu_msg.orientation.y;
@@ -286,7 +302,7 @@ public:
 		// Convert into roll, pitch, and yaw
 		// These conversions are take directly from the VectorNav Quaternion math guide 
 		// https://www.vectornav.com/docs/default-source/documentation/vn-100-documentation/AN002.pdf?sfvrsn=19ee6b9_13
-		float imu_yaw = atan2(2*(q_x*q_y + q_w*q_z), q_w*q_w - q_z*q_z - q_y*q_y + q_x*q_x);
+		float imu_yaw = 0; //atan2(2*(q_x*q_y + q_w*q_z), q_w*q_w - q_z*q_z - q_y*q_y + q_x*q_x);
 		float imu_pitch = asin(-2*(q_x*q_z - q_y*q_w));
 		float imu_roll = atan2(2*(q_y*q_z + q_x*q_w), q_w*q_w + q_z*q_z - q_y*q_y - q_x*q_x);
 
@@ -314,35 +330,6 @@ public:
 
 		// Publish message
 		vn_state_pub_.publish(state_msg);
-
-		// TODO: REMOVE THIS LATER IT'S JUST FOR TESTING OUR STATE
-		EKF::robot_state our_state;
-
-		// Set the timestamp for the message
-		our_state.header.stamp = state_msg.header.stamp;
-
-		// Calclate roll, pitch and yaw from the linear acceleration values
-		// Temporary variables just to make calculations cleaner
-		float accel_x = imu_msg.linear_acceleration.x;
-		float accel_y = imu_msg.linear_acceleration.y;
-		float accel_z = imu_msg.linear_acceleration.z;
-
-		// Find roll in radians
-		float roll = atan2(accel_y, accel_z);
-
-		// Find pitch in radians
-		float pitch = atan2(-accel_x, sqrt(accel_y*accel_y + accel_z*accel_z));
-
-		// Find yaw in radians
-		float yaw = atan2(accel_z, sqrt(accel_x*accel_x + accel_z*accel_z));
-
-		// Update roll, pitch, and yaw values
-		our_state.roll = roll; 
-		our_state.pitch = pitch;
-		our_state.yaw = yaw;
-
-		our_state_pub_.publish(our_state);
-		// TODO: REMOVE THIS LATER IT'S JUST FOR TESTING OUR STATE
 	}
 
 	// Callback function for the depth messages from the bar30 Depth sensor
@@ -381,51 +368,55 @@ public:
 	// Predict the current state based on the previous state
 	void predict() 
 	{
-		cout << "Start predict" << endl;
-		printState();
-
 		// State prediction
 		state_ = F_ * state_;
 
 		// Covariance matrix prediction
 		cov_ = F_*cov_*F_.transpose() + Q_;
-
-		cout << "End predict" << endl;
-		printState();
 	}
 
 	// Update the state based on the predicted state and the data from the IMU
 	// TODO: Figure out what part of the update step is causing the state and covariance matrix to all become NaN
 	void IMUKalmanUpdate(const sensor_msgs::Imu imu_msg)
 	{
-		cout << "Start update" << endl;
-		printState();
+		// State message for robot state
+		EKF::robot_state our_state;
 
-		// TODO: Add the Kalman Filter update stuff for the IMU
-		// Take the values from the IMU message and put them in a quarternion vector
-		Quaternionf quat;
+		// Set the timestamp for the message
+		our_state.header.stamp = ros::Time::now();
 
-		quat.x() = imu_msg.orientation.x;
-		quat.y() = imu_msg.orientation.y;
-		quat.z() = imu_msg.orientation.z;
-		quat.w() = imu_msg.orientation.w;
+		// Calclate roll, pitch and yaw from the linear acceleration values
+		// Temporary variables just to make calculations cleaner
+		float accel_x = -imu_msg.linear_acceleration.x;
+		float accel_y = -imu_msg.linear_acceleration.y;
+		float accel_z = -imu_msg.linear_acceleration.z;
 
-		// Get the Euler angles from the quaternion
-		Eigen::Vector3f euler = quat.toRotationMatrix().eulerAngles(0, 1, 2);
+		// Find roll in radians
+		float roll = atan2(accel_y, accel_z);
+
+		// Find pitch in radians
+		float pitch = atan2(-accel_x, sqrt(accel_y*accel_y + accel_z*accel_z));
+
+		// Find yaw in radians
+		float yaw = 0; //atan2(accel_z, sqrt(accel_x*accel_x + accel_z*accel_z));
+
+		// Update roll, pitch, and yaw values
+		our_state.roll = roll; 
+		our_state.pitch = pitch;
+		our_state.yaw = yaw;
+
+		our_state_pub_.publish(our_state);
 
 		// Fill measurement vector z with roll, pitch, yaw, and derivatives values
 		VectorXd z(6);
 
 		// Put values into the vector
-		z << euler(0), euler(1), euler(2), // roll, pitch, yaw
+		z << roll, pitch, yaw, // roll, pitch, yaw
 			 imu_msg.angular_velocity.x, // roll_dot
 			 imu_msg.angular_velocity.y, // pitch_dot
 			 imu_msg.angular_velocity.z; // yaw_dot
 
 		VectorXd y = z - H_IMU_ * state_; // Measurement error
-
-		// cout << "y" << endl;
-		// cout << y << endl;
 
 		MatrixXd S = H_IMU_ * cov_ * H_IMU_.transpose() + R_IMU_;
 		MatrixXd K = cov_ * H_IMU_.transpose() * S.inverse(); // Kalman gain
@@ -437,9 +428,6 @@ public:
 		MatrixXd I = MatrixXd::Identity(state_.size(), state_.size());
 
 		cov_ = (I - K*H_IMU_)*cov_;
-
-		cout << "End update" << endl;
-		printState();
 
 	}
 
