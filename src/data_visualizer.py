@@ -38,7 +38,7 @@ class Visualizer(object):
 		self.state.yaw_dot = 1
 
 		# Variables to be used for the plot
-		self.fig, (self.ax1, self.ax2) = plt.subplots(2,1)
+		self.fig, (self.ax1, self.ax2, self.ax3) = plt.subplots(3,1)
 		# self.ax1 = self.fig.add_subplot(1,1,1)
 		# self.ax2 = self.fig.add_subplot(2,1,1)
 
@@ -51,6 +51,16 @@ class Visualizer(object):
 		# Variables for setting up time to plot against
 		self.started = False
 		self.start_time = rospy.Time.now()
+
+		# Lists for holding values from our unfiltered state messages
+		self.uf_roll_ar = []
+		self.uf_pitch_ar = []
+		self.uf_yaw_ar = []
+		self.uf_time_ar = []
+
+		# Variables for setting up time to plot against
+		self.uf_started = False
+		self.uf_start_time = rospy.Time.now()
 
 		# Lists for holding data from vn IMU messages
 		self.vn_roll_ar = []
@@ -100,18 +110,38 @@ class Visualizer(object):
 		# Update time array with latest time since start
 		self.time_ar.append(state_msg.header.stamp.secs - self.start_time.secs)
 
+
+	# Recieves messages from the EKF node about the latest state
+	def unfiltStateCallback(self, state_msg):
+		# print state_msg
+
+		# Get the start time to make graphing look better
+		if(self.uf_started == False):
+			self.uf_start_time = rospy.Time.now()
+			self.uf_started = True
+
+		# Append values from state_msg into their proper arrays
+		self.uf_roll_ar.append(state_msg.roll)
+		self.uf_pitch_ar.append(state_msg.pitch)
+		self.uf_yaw_ar.append(state_msg.yaw)
+
+		# Update time array with latest time since start
+		self.uf_time_ar.append(state_msg.header.stamp.secs - self.uf_start_time.secs)
+
 		
 
 
 
 	# Plots the newest data from either the IMU or the EKF on the plot
 	def plotData(self, data):
+
+		# FILTERED ROBOT ORIENTATION
 		# Clear the previous data
 		self.ax1.clear()
 
 		# Set title and lables for the plot
 		# TODO: Find a way to only have the plotted data cleared so we don't have to redo these every time
-		self.ax1.set_title('Robot orientation over time')
+		self.ax1.set_title('Filtered orientation over time')
 		# self.ax1.set_xlabel('Time (seconds)')
 		self.ax1.set_ylabel('Euler Angle Values (rads)')
 
@@ -130,27 +160,54 @@ class Visualizer(object):
 		# Show the legend for the various lines
 		self.ax1.legend()
 
-		# Plot for IMU data
+		# UNFILTERED ROBOT ORIENTATION
+		# Clear the previous data
 		self.ax2.clear()
 
-		self.ax2.set_title('IMU orientation over time')
-		self.ax2.set_xlabel('Time (seconds)')
+		# Set title and lables for the plot
+		# TODO: Find a way to only have the plotted data cleared so we don't have to redo these every time
+		self.ax2.set_title('Unfiltered orientation over time')
+		# self.ax1.set_xlabel('Time (seconds)')
 		self.ax2.set_ylabel('Euler Angle Values (rads)')
 
 		# Plot roll over time
-		roll, = self.ax2.plot(self.vn_time_ar, self.vn_roll_ar)
+		roll, = self.ax2.plot(self.uf_time_ar, self.uf_roll_ar)
 		roll.set_label("Roll") # Label the line
 
 		# Plot pitch over time
-		pitch, = self.ax2.plot(self.vn_time_ar, self.vn_pitch_ar)
+		pitch, = self.ax2.plot(self.uf_time_ar, self.uf_pitch_ar)
 		pitch.set_label("Pitch") # Label the line
 
 		# Plot yaw over time
-		yaw, = self.ax2.plot(self.vn_time_ar, self.vn_yaw_ar)
+		yaw, = self.ax2.plot(self.uf_time_ar, self.uf_yaw_ar)
 		yaw.set_label("Yaw") # Label the line
 
 		# Show the legend for the various lines
 		self.ax2.legend()
+
+
+		# IMU ROBOT ORIENTATION
+		# Plot for IMU data
+		self.ax3.clear()
+
+		self.ax3.set_title('IMU orientation over time')
+		self.ax3.set_xlabel('Time (seconds)')
+		self.ax3.set_ylabel('Euler Angle Values (rads)')
+
+		# Plot roll over time
+		roll, = self.ax3.plot(self.vn_time_ar, self.vn_roll_ar)
+		roll.set_label("Roll") # Label the line
+
+		# Plot pitch over time
+		pitch, = self.ax3.plot(self.vn_time_ar, self.vn_pitch_ar)
+		pitch.set_label("Pitch") # Label the line
+
+		# Plot yaw over time
+		yaw, = self.ax3.plot(self.vn_time_ar, self.vn_yaw_ar)
+		yaw.set_label("Yaw") # Label the line
+
+		# Show the legend for the various lines
+		self.ax3.legend()
 
 
 
@@ -164,7 +221,10 @@ if __name__ == "__main__":
 	vis = Visualizer()
 
 	# Subscriber for our robot state topic
-	rospy.Subscriber('/our_state', robot_state, vis.ekfStateCallback)
+	rospy.Subscriber('/filtered_state', robot_state, vis.ekfStateCallback)
+
+	# Subsriber for the unfiltered state
+	rospy.Subscriber('/unfiltered_state', robot_state, vis.unfiltStateCallback)
 
 	# Subscriber for robot state from pure IMU data
 	rospy.Subscriber('/vn_state', robot_state, vis.vnStateCallback)

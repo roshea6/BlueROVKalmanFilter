@@ -63,13 +63,21 @@ private:
 	// VectorNav Robot state publisher
 	ros::Publisher vn_state_pub_ = n_.advertise<EKF::robot_state>("/vn_state", 100);
 
-	ros::Publisher our_state_pub_ = n_.advertise<EKF::robot_state>("/our_state", 100);
+	ros::Publisher filtered_state_pub_ = n_.advertise<EKF::robot_state>("/filtered_state", 100);
+
+	ros::Publisher unfiltered_state_pub_ = n_.advertise<EKF::robot_state>("/unfiltered_state", 100);
 
 	// Variable to keep track of the previous time so we can find difference between timestamps
 	float previous_timestamp_;
 
 	// Variable to keep track of if the first sensor reading has been used to initilize the state matrix
 	bool is_initialized_ = false;
+
+	// Variable for storing most recent depth sensor message
+	bar30_depth::Depth* depth_msg_ = nullptr;
+
+	// Variable for storing the most recent DVL sensor message
+	rti_dvl::DVL* DVL_msg_ = nullptr;
 
 
 public:
@@ -179,13 +187,13 @@ public:
 			// Gyro noise for angular velocity
 			if(i < 3)
 			{
-				R_IMU_(i, i) = .1;
+				R_IMU_(i, i) = .0035;
 			}
 
 			// Accelerometer noise for linear acceleration
 			else
 			{
-				R_IMU_(i, i) = .1;
+				R_IMU_(i, i) = .14;
 			}			
 		}
 
@@ -203,7 +211,7 @@ public:
 				// x, y, z, roll, pitch, yaw 
 				if(i == j and i < 6)
 				{
-					Q_(i, j) = .005;
+					Q_(i, j) = 1;
 				}
 
 				// Initialize derivate position variables along the diagonal to have a covariance of 1000
@@ -211,16 +219,19 @@ public:
 				// x_dot, y_dot, z_dot, roll_dot, pitch_dot, yaw_dot
 				else if(i == j and i >= 6)
 				{
-					Q_(i, j) = 5;
+					Q_(i, j) = 1;
 				}
 				
 				// Fill the rest with 0's to start off
 				else
 				{
-					cov_(i, j) = 0;
+					Q_(i, j) = 0;
 				}
 			}
 		}
+
+		cout << "Process covariance" << endl;
+		cout << Q_ << endl;
 	}
 
 	// Destuctor
@@ -238,9 +249,9 @@ public:
 		{
 			// Calclate roll, pitch and yaw from the linear acceleration values
 			// Temporary variables just to make calculations cleaner
-			float accel_x = imu_msg.linear_acceleration.x;
-			float accel_y = imu_msg.linear_acceleration.y;
-			float accel_z = imu_msg.linear_acceleration.z;
+			float accel_x = -imu_msg.linear_acceleration.x;
+			float accel_y = -imu_msg.linear_acceleration.y;
+			float accel_z = -imu_msg.linear_acceleration.z;
 
 			// Find roll in radians
 			float roll = atan2(accel_y, accel_z);
@@ -249,7 +260,7 @@ public:
 			float pitch = atan2(-accel_x, sqrt(accel_y*accel_y + accel_z*accel_z));
 
 			// Find yaw in radians
-			float yaw = atan2(accel_z, sqrt(accel_x*accel_x + accel_z*accel_z));
+			float yaw = 0; //atan2(accel_z, sqrt(accel_x*accel_x + accel_z*accel_z));
 
 			// Update roll, pitch, and yaw values
 			state_(3) = roll; 
@@ -257,9 +268,10 @@ public:
 			state_(5) = yaw;
 
 			// Update derivatives of orientation variables
-			state_(9) = imu_msg.angular_velocity.x; // roll_dot
-			state_(10) = imu_msg.angular_velocity.y; // pitch_dot
-			state_(11) = imu_msg.angular_velocity.z; // yaw_dot
+			// ! Change these back to positive posibbly
+			state_(9) = -imu_msg.angular_velocity.x; // roll_dot
+			state_(10) = -imu_msg.angular_velocity.y; // pitch_dot
+			state_(11) = -imu_msg.angular_velocity.z; // yaw_dot
 
 			// Mark the state as initilized
 			is_initialized_ = true;
@@ -281,11 +293,39 @@ public:
 			// Update the off diagonal values for the derivatives of the position state variables
 			// with the value of how much time has passed
 			// Like before, the column index of a derivative of a position variable in the state matrix can be found by adding 6 to its index
-			F_(i, i+6) = .005; // TODO: Change this from 1 to dt
+			F_(i, i+6) = .005; // TODO: Change this to dt
 		}
 		
 
 		predict(); // Predict the current state 
+
+		// Check if the other messages are currently available to update the state
+
+		// Check if a depth message is available
+		if(depth_msg_ != nullptr)
+		{
+			// If a depth message is ready then update the state using the message
+			depthKalmanUpdate();
+
+			// Free the memory being using by the depth msg object
+			delete depth_msg_;
+
+			// Set the variable to nullptr so this doens't trigger again until we've received a new message
+			depth_msg_ = nullptr;
+		}
+
+		// Check if a DVL message is available
+		if(DVL_msg_ != nullptr)
+		{
+			// If a DVL message is ready then update the state using the message
+			DVLKalmanUpdate();
+
+			// Free the memory being using by the DVL msg object
+			delete DVL_msg_;
+
+			// Set the variable to nullptr so this doens't trigger again until we've received a new message
+			DVL_msg_ = nullptr;
+		}
 
 
 		// Update measurement state mapping matrix H and sensor covariance matrix R
@@ -312,7 +352,7 @@ public:
 		EKF::robot_state state_msg;
 
 		// Set the time for the state message
-		state_msg.header.stamp = ros::Time::now();
+		state_msg.header.stamp = imu_msg.header.stamp;
 
 		// Populate message with garbage data for now
 		state_msg.x = state_(0);
@@ -330,38 +370,42 @@ public:
 
 		// Publish message
 		vn_state_pub_.publish(state_msg);
+
+
+		// Publish filtered state after latest update
+		// State message for filtered robot state
+		EKF::robot_state filtered_state;
+
+		// Set the timestamp for the message
+		filtered_state.header.stamp = imu_msg.header.stamp;
+
+		filtered_state.roll = state_[3]; 
+		filtered_state.pitch = state_[4];
+		filtered_state.yaw = state_[5];
+
+		filtered_state_pub_.publish(filtered_state);
+
+		// printState();
 	}
 
 	// Callback function for the depth messages from the bar30 Depth sensor
-	void depthCallback(const bar30_depth::Depth depth_msg)
+	void depthCallback(bar30_depth::Depth new_msg)
 	{
-		// cout << "Depth message:" << endl;
-		// cout << depth_msg << endl;
+		// Allocate the space for the new depth message to be saved
+		depth_msg_ = new bar30_depth::Depth;
 
-		// Calculate dt
-
-		// Update the state transition matrix F and process noise matrix Q
-		// predict(); // Predict the current state 
-
-		// Update measurement state mapping matrix H and sensor covariance matrix R
-		depthKalmanUpdate(depth_msg); // Use the data from the IMU to update the state
-
+		// Populate the saved message's data with the data from the new depth message
+		*depth_msg_ = new_msg;
 	}
 
 	// Callback function for the doppler velocity logger (DVL) messages from the **** DVL
-	void DVLCallback(const rti_dvl::DVL dvl_msg)
+	void DVLCallback(const rti_dvl::DVL new_msg)
 	{
-		// cout << "DVL message:" << endl;
-		// cout << dvl_msg << endl;
+		// Allocate the space for a new DVL message to be saved
+		DVL_msg_ = new rti_dvl::DVL;
 
-		// Calculate dt
-
-		// Update the state transition matrix F and process noise matrix Q
-		// predict(); // Predict the current state 
-
-		// Update measurement state mapping matrix H and sensor covariance matrix R
-		DVLKalmanUpdate(dvl_msg); // Use the data from the IMU to update the state
-
+		// Populate the saved message's data with the data from the new DVL message
+		*DVL_msg_ = new_msg;
 	}
 	
 
@@ -372,7 +416,7 @@ public:
 		state_ = F_ * state_;
 
 		// Covariance matrix prediction
-		cov_ = F_*cov_*F_.transpose() + Q_;
+		cov_ = F_*cov_*(F_.transpose()) + Q_;
 	}
 
 	// Update the state based on the predicted state and the data from the IMU
@@ -380,10 +424,10 @@ public:
 	void IMUKalmanUpdate(const sensor_msgs::Imu imu_msg)
 	{
 		// State message for robot state
-		EKF::robot_state our_state;
+		EKF::robot_state uf_state;
 
 		// Set the timestamp for the message
-		our_state.header.stamp = ros::Time::now();
+		uf_state.header.stamp = imu_msg.header.stamp;
 
 		// Calclate roll, pitch and yaw from the linear acceleration values
 		// Temporary variables just to make calculations cleaner
@@ -401,25 +445,31 @@ public:
 		float yaw = 0; //atan2(accel_z, sqrt(accel_x*accel_x + accel_z*accel_z));
 
 		// Update roll, pitch, and yaw values
-		our_state.roll = roll; 
-		our_state.pitch = pitch;
-		our_state.yaw = yaw;
+		uf_state.roll = roll; 
+		uf_state.pitch = pitch;
+		uf_state.yaw = yaw;
 
-		our_state_pub_.publish(our_state);
+		unfiltered_state_pub_.publish(uf_state);
 
 		// Fill measurement vector z with roll, pitch, yaw, and derivatives values
 		VectorXd z(6);
 
 		// Put values into the vector
 		z << roll, pitch, yaw, // roll, pitch, yaw
-			 imu_msg.angular_velocity.x, // roll_dot
-			 imu_msg.angular_velocity.y, // pitch_dot
-			 imu_msg.angular_velocity.z; // yaw_dot
+			 -imu_msg.angular_velocity.x, // roll_dot
+			 -imu_msg.angular_velocity.y, // pitch_dot
+			 -imu_msg.angular_velocity.z; // yaw_dot
+		// ! Change these back to positive posibbly
 
 		VectorXd y = z - H_IMU_ * state_; // Measurement error
+		MatrixXd S = H_IMU_ * cov_ * (H_IMU_.transpose()) + R_IMU_;
 
-		MatrixXd S = H_IMU_ * cov_ * H_IMU_.transpose() + R_IMU_;
-		MatrixXd K = cov_ * H_IMU_.transpose() * S.inverse(); // Kalman gain
+		// TODO: Figure out why Kalman gain is always near 0
+		MatrixXd K = cov_ * (H_IMU_.transpose()) * (S.inverse()); // Kalman gain
+
+		// cout << "Kalman gain" << endl;
+		// cout << K << endl;
+		// cout << "\n";
 
 		// Get new state
 		state_ = state_ + K*y;
@@ -432,15 +482,17 @@ public:
 	}
 
 	// Update the state based on the predicted state and the data from the Depth sensor
-	void depthKalmanUpdate(const bar30_depth::Depth depth_msg)
+	void depthKalmanUpdate()
 	{
 		// TODO: Add the Kalman Filter update stuff for the Depth sensor
+		// ! Message data to use is stored in depth_msg_
 	}
 
 	// Update the state based on the predicted state and the data from the DVL
-	void DVLKalmanUpdate(const rti_dvl::DVL dvl_msg)
+	void DVLKalmanUpdate()
 	{
 		// TODO: Add the Kalman Filter update stuff for the DVL
+		// ! Message data to us is stored in DVL_msg_
 	}
 
 
