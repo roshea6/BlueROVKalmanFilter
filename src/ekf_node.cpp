@@ -183,19 +183,22 @@ public:
 		// TODO: Initialize the IMU measurement covairance matrix
 		R_IMU_ = MatrixXd(6, 6);
 
+		// Set everything in the matrix to 0 because we only have to initialize the main diagnonal
+		R_IMU_.setZero();
+
 		for(int i = 0; i < 6; i++)
 		{
 			// ? Try setting these to just being the same value
-			// Gyro noise for angular velocity
+			// Accelerometer noise for linear acceleration which is used to find orientation
 			if(i < 3)
 			{
-				R_IMU_(i, i) = .14;
+				R_IMU_(i, i) = .15;
 			}
 
-			// Accelerometer noise for linear acceleration
+			// Gyroscope noise used to find angular velocity
 			else
 			{
-				R_IMU_(i, i) = .035;
+				R_IMU_(i, i) = .035; //.035
 			}			
 		}
 
@@ -213,7 +216,7 @@ public:
 				// x, y, z, roll, pitch, yaw 
 				if(i == j and i < 6)
 				{
-					Q_(i, j) = .01;
+					Q_(i, j) = .001;
 				}
 
 				// Initialize derivate position variables along the diagonal to have a covariance of 1000
@@ -221,7 +224,7 @@ public:
 				// x_dot, y_dot, z_dot, roll_dot, pitch_dot, yaw_dot
 				else if(i == j and i >= 6)
 				{
-					Q_(i, j) = .01;
+					Q_(i, j) = .001;
 				}
 				
 				// Fill the rest with 0's to start off
@@ -273,7 +276,7 @@ public:
 			// ! Change these back to positive posibbly
 			state_(9) = -imu_msg.angular_velocity.x; // roll_dot
 			state_(10) = -imu_msg.angular_velocity.y; // pitch_dot
-			state_(11) = -imu_msg.angular_velocity.z; // yaw_dot
+			state_(11) = 0; // -imu_msg.angular_velocity.z; // yaw_dot // ! Change this back from 0
 
 			// Mark the state as initilized
 			is_initialized_ = true;
@@ -304,30 +307,30 @@ public:
 		// Check if the other messages are currently available to update the state
 
 		// Check if a depth message is available
-		if(depth_msg_ != nullptr)
-		{
-			// If a depth message is ready then update the state using the message
-			depthKalmanUpdate();
+		// if(depth_msg_ != nullptr)
+		// {
+		// 	// If a depth message is ready then update the state using the message
+		// 	depthKalmanUpdate();
 
-			// Free the memory being using by the depth msg object
-			delete depth_msg_;
+		// 	// Free the memory being using by the depth msg object
+		// 	delete depth_msg_;
 
-			// Set the variable to nullptr so this doens't trigger again until we've received a new message
-			depth_msg_ = nullptr;
-		}
+		// 	// Set the variable to nullptr so this doens't trigger again until we've received a new message
+		// 	depth_msg_ = nullptr;
+		// }
 
-		// Check if a DVL message is available
-		if(DVL_msg_ != nullptr)
-		{
-			// If a DVL message is ready then update the state using the message
-			DVLKalmanUpdate();
+		// // Check if a DVL message is available
+		// if(DVL_msg_ != nullptr)
+		// {
+		// 	// If a DVL message is ready then update the state using the message
+		// 	DVLKalmanUpdate();
 
-			// Free the memory being using by the DVL msg object
-			delete DVL_msg_;
+		// 	// Free the memory being using by the DVL msg object
+		// 	delete DVL_msg_;
 
-			// Set the variable to nullptr so this doens't trigger again until we've received a new message
-			DVL_msg_ = nullptr;
-		}
+		// 	// Set the variable to nullptr so this doens't trigger again until we've received a new message
+		// 	DVL_msg_ = nullptr;
+		// }
 
 
 		// Update measurement state mapping matrix H and sensor covariance matrix R
@@ -460,7 +463,7 @@ public:
 		z_meas << roll, pitch, yaw, // roll, pitch, yaw
 			 -imu_msg.angular_velocity.x, // roll_dot
 			 -imu_msg.angular_velocity.y, // pitch_dot
-			 -imu_msg.angular_velocity.z; // yaw_dot
+			 0; //-imu_msg.angular_velocity.z; // yaw_dot // ! Change this back from 0
 		// ! Change these back to positive possibly
 
 		VectorXd z_pred = H_IMU_ *state_;

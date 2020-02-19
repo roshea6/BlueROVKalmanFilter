@@ -134,57 +134,55 @@ class Visualizer(object):
 
 	# Plots the newest data from either the IMU or the EKF on the plot
 	def plotData(self, data):
-
-		# FILTERED ROBOT ORIENTATION
+		# UNFILTERED ROBOT ORIENTATION
 		# Clear the previous data
 		self.ax1.clear()
 
 		# Set title and lables for the plot
 		# TODO: Find a way to only have the plotted data cleared so we don't have to redo these every time
-		self.ax1.set_title('Filtered orientation over time')
+		self.ax1.set_title('Unfiltered orientation over time')
 		# self.ax1.set_xlabel('Time (seconds)')
 		self.ax1.set_ylabel('Euler Angle Values (rads)')
 
 		# Plot roll over time
-		roll, = self.ax1.plot(self.time_ar, self.roll_ar)
+		roll, = self.ax1.plot(self.uf_time_ar, self.uf_roll_ar)
 		roll.set_label("Roll") # Label the line
 
 		# Plot pitch over time
-		pitch, = self.ax1.plot(self.time_ar, self.pitch_ar)
+		pitch, = self.ax1.plot(self.uf_time_ar, self.uf_pitch_ar)
 		pitch.set_label("Pitch") # Label the line
 
 		# Plot yaw over time
-		yaw, = self.ax1.plot(self.time_ar, self.yaw_ar)
+		yaw, = self.ax1.plot(self.uf_time_ar, self.uf_yaw_ar)
 		yaw.set_label("Yaw") # Label the line
 
 		# Show the legend for the various lines
 		self.ax1.legend()
 
-		# UNFILTERED ROBOT ORIENTATION
+		# FILTERED ROBOT ORIENTATION
 		# Clear the previous data
 		self.ax2.clear()
 
 		# Set title and lables for the plot
 		# TODO: Find a way to only have the plotted data cleared so we don't have to redo these every time
-		self.ax2.set_title('Unfiltered orientation over time')
+		self.ax2.set_title('Filtered orientation over time')
 		# self.ax1.set_xlabel('Time (seconds)')
 		self.ax2.set_ylabel('Euler Angle Values (rads)')
 
 		# Plot roll over time
-		roll, = self.ax2.plot(self.uf_time_ar, self.uf_roll_ar)
+		roll, = self.ax2.plot(self.time_ar, self.roll_ar)
 		roll.set_label("Roll") # Label the line
 
 		# Plot pitch over time
-		pitch, = self.ax2.plot(self.uf_time_ar, self.uf_pitch_ar)
+		pitch, = self.ax2.plot(self.time_ar, self.pitch_ar)
 		pitch.set_label("Pitch") # Label the line
 
 		# Plot yaw over time
-		yaw, = self.ax2.plot(self.uf_time_ar, self.uf_yaw_ar)
+		yaw, = self.ax2.plot(self.time_ar, self.yaw_ar)
 		yaw.set_label("Yaw") # Label the line
 
 		# Show the legend for the various lines
 		self.ax2.legend()
-
 
 		# IMU ROBOT ORIENTATION
 		# Plot for IMU data
