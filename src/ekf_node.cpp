@@ -63,8 +63,10 @@ private:
 	// VectorNav Robot state publisher
 	ros::Publisher vn_state_pub_ = n_.advertise<EKF::robot_state>("/vn_state", 100);
 
+	// Filtered state publisher
 	ros::Publisher filtered_state_pub_ = n_.advertise<EKF::robot_state>("/filtered_state", 100);
 
+	// Unfiltered state publisher
 	ros::Publisher unfiltered_state_pub_ = n_.advertise<EKF::robot_state>("/unfiltered_state", 100);
 
 	// Variable to keep track of the previous time so we can find difference between timestamps
@@ -187,13 +189,13 @@ public:
 			// Gyro noise for angular velocity
 			if(i < 3)
 			{
-				R_IMU_(i, i) = .0035;
+				R_IMU_(i, i) = .14;
 			}
 
 			// Accelerometer noise for linear acceleration
 			else
 			{
-				R_IMU_(i, i) = .14;
+				R_IMU_(i, i) = .035;
 			}			
 		}
 
@@ -211,7 +213,7 @@ public:
 				// x, y, z, roll, pitch, yaw 
 				if(i == j and i < 6)
 				{
-					Q_(i, j) = 1;
+					Q_(i, j) = .01;
 				}
 
 				// Initialize derivate position variables along the diagonal to have a covariance of 1000
@@ -219,7 +221,7 @@ public:
 				// x_dot, y_dot, z_dot, roll_dot, pitch_dot, yaw_dot
 				else if(i == j and i >= 6)
 				{
-					Q_(i, j) = 1;
+					Q_(i, j) = .01;
 				}
 				
 				// Fill the rest with 0's to start off
@@ -293,7 +295,7 @@ public:
 			// Update the off diagonal values for the derivatives of the position state variables
 			// with the value of how much time has passed
 			// Like before, the column index of a derivative of a position variable in the state matrix can be found by adding 6 to its index
-			F_(i, i+6) = .005; // TODO: Change this to dt
+			F_(i, i+6) = .005; //1/200 to match the frequency of the IMU
 		}
 		
 
@@ -385,11 +387,11 @@ public:
 
 		filtered_state_pub_.publish(filtered_state);
 
-		// printState();
+		printState();
 	}
 
 	// Callback function for the depth messages from the bar30 Depth sensor
-	void depthCallback(bar30_depth::Depth new_msg)
+	void depthCallback(const bar30_depth::Depth new_msg)
 	{
 		// Allocate the space for the new depth message to be saved
 		depth_msg_ = new bar30_depth::Depth;
@@ -452,17 +454,30 @@ public:
 		unfiltered_state_pub_.publish(uf_state);
 
 		// Fill measurement vector z with roll, pitch, yaw, and derivatives values
-		VectorXd z(6);
+		VectorXd z_meas(6);
 
 		// Put values into the vector
-		z << roll, pitch, yaw, // roll, pitch, yaw
+		z_meas << roll, pitch, yaw, // roll, pitch, yaw
 			 -imu_msg.angular_velocity.x, // roll_dot
 			 -imu_msg.angular_velocity.y, // pitch_dot
 			 -imu_msg.angular_velocity.z; // yaw_dot
-		// ! Change these back to positive posibbly
+		// ! Change these back to positive possibly
 
-		VectorXd y = z - H_IMU_ * state_; // Measurement error
+		VectorXd z_pred = H_IMU_ *state_;
+
+		// cout << "z_meas \n" << z_meas << endl;
+
+		// cout << "State \n" << state_ << endl;
+
+		// cout << "z_pred \n" << z_pred << endl;
+
+		VectorXd y = z_meas - z_pred; // Measurement error
+
+		// cout << "Y \n" << y << endl;
+
 		MatrixXd S = H_IMU_ * cov_ * (H_IMU_.transpose()) + R_IMU_;
+
+		// cout << "S \n" << S << endl;
 
 		// TODO: Figure out why Kalman gain is always near 0
 		MatrixXd K = cov_ * (H_IMU_.transpose()) * (S.inverse()); // Kalman gain
@@ -513,6 +528,14 @@ public:
 
 		// cout << "IMU H Matrix" << endl;
 		// cout << H_IMU_ << endl;
+		// cout << "\n";
+
+		// cout << "IMU R Matrix" << endl;
+		// cout << R_IMU_ << endl;
+		// cout << "\n";
+
+		// cout << "Q Matrix" << endl;
+		// cout << Q_ << endl;
 		// cout << "\n";
 	}
 
