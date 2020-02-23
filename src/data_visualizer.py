@@ -17,30 +17,12 @@ from rti_dvl.msg import DVL
 # Robot state message
 from EKF.msg import robot_state
 
-class Visualizer(object):
+# Class for visualizing robot state data from the IMU
+class IMUVisualizer(object):
 	# Initialization function to setup variables
 	def __init__(self):
-		# Initialize state as a blank robot_state message
-		self.state = robot_state()
-
-		# Fill in with dummy values
-		self.state.x = 1
-		self.state.y = 1
-		self.state.z = 1
-		self.state.roll = 1
-		self.state.pitch = 1
-		self.state.yaw = 1
-		self.state.x_dot = 1
-		self.state.y_dot = 1
-		self.state.z_dot = 1
-		self.state.roll_dot = 1
-		self.state.pitch_dot = 1
-		self.state.yaw_dot = 1
-
 		# Variables to be used for the plot
-		self.fig, (self.ax1, self.ax2, self.ax3) = plt.subplots(3,1)
-		# self.ax1 = self.fig.add_subplot(1,1,1)
-		# self.ax2 = self.fig.add_subplot(2,1,1)
+		self.imu_fig, (self.imu_ax1, self.imu_ax2, self.imu_ax3) = plt.subplots(3,1)
 
 		# Lists for holding values from our state messages
 		self.roll_ar = []
@@ -90,17 +72,13 @@ class Visualizer(object):
 
 
 	# Recieves messages from the EKF node about the latest state
-	def ekfStateCallback(self, state_msg):
+	def ekfIMUStateCallback(self, state_msg):
 		# print state_msg
 
 		# Get the start time to make graphing look better
 		if(self.started == False):
 			self.start_time = rospy.Time.now()
 			self.started = True
-
-		# Update state with new message
-		# We might not need this?
-		self.state = state_msg
 
 		# Append values from state_msg into their proper arrays
 		self.roll_ar.append(state_msg.roll)
@@ -112,7 +90,7 @@ class Visualizer(object):
 
 
 	# Recieves messages from the EKF node about the latest state
-	def unfiltStateCallback(self, state_msg):
+	def unfiltIMUStateCallback(self, state_msg):
 		# print state_msg
 
 		# Get the start time to make graphing look better
@@ -128,106 +106,215 @@ class Visualizer(object):
 		# Update time array with latest time since start
 		self.uf_time_ar.append(state_msg.header.stamp.secs - self.uf_start_time.secs)
 
-		
-
-
-
 	# Plots the newest data from either the IMU or the EKF on the plot
-	def plotData(self, data):
+	def plotIMUData(self, data):
 		# UNFILTERED ROBOT ORIENTATION
 		# Clear the previous data
-		self.ax1.clear()
+		self.imu_ax1.clear()
 
 		# Set title and lables for the plot
 		# TODO: Find a way to only have the plotted data cleared so we don't have to redo these every time
-		self.ax1.set_title('Unfiltered orientation over time')
-		# self.ax1.set_xlabel('Time (seconds)')
-		self.ax1.set_ylabel('Euler Angle Values (rads)')
+		self.imu_ax1.set_title('Unfiltered orientation over time')
+		self.imu_ax1.set_ylabel('Euler Angle Values (rads)')
 
 		# Plot roll over time
-		roll, = self.ax1.plot(self.uf_time_ar, self.uf_roll_ar)
+		roll, = self.imu_ax1.plot(self.uf_time_ar, self.uf_roll_ar)
 		roll.set_label("Roll") # Label the line
 
 		# Plot pitch over time
-		pitch, = self.ax1.plot(self.uf_time_ar, self.uf_pitch_ar)
+		pitch, = self.imu_ax1.plot(self.uf_time_ar, self.uf_pitch_ar)
 		pitch.set_label("Pitch") # Label the line
 
 		# Plot yaw over time
-		yaw, = self.ax1.plot(self.uf_time_ar, self.uf_yaw_ar)
+		yaw, = self.imu_ax1.plot(self.uf_time_ar, self.uf_yaw_ar)
 		yaw.set_label("Yaw") # Label the line
 
 		# Show the legend for the various lines
-		self.ax1.legend()
+		self.imu_ax1.legend()
 
 		# FILTERED ROBOT ORIENTATION
 		# Clear the previous data
-		self.ax2.clear()
+		self.imu_ax2.clear()
 
 		# Set title and lables for the plot
 		# TODO: Find a way to only have the plotted data cleared so we don't have to redo these every time
-		self.ax2.set_title('Filtered orientation over time')
-		# self.ax1.set_xlabel('Time (seconds)')
-		self.ax2.set_ylabel('Euler Angle Values (rads)')
+		self.imu_ax2.set_title('Filtered orientation over time')
+		self.imu_ax2.set_ylabel('Euler Angle Values (rads)')
 
 		# Plot roll over time
-		roll, = self.ax2.plot(self.time_ar, self.roll_ar)
+		roll, = self.imu_ax2.plot(self.time_ar, self.roll_ar)
 		roll.set_label("Roll") # Label the line
 
 		# Plot pitch over time
-		pitch, = self.ax2.plot(self.time_ar, self.pitch_ar)
+		pitch, = self.imu_ax2.plot(self.time_ar, self.pitch_ar)
 		pitch.set_label("Pitch") # Label the line
 
 		# Plot yaw over time
-		yaw, = self.ax2.plot(self.time_ar, self.yaw_ar)
+		yaw, = self.imu_ax2.plot(self.time_ar, self.yaw_ar)
 		yaw.set_label("Yaw") # Label the line
 
 		# Show the legend for the various lines
-		self.ax2.legend()
+		self.imu_ax2.legend()
 
 		# IMU ROBOT ORIENTATION
 		# Plot for IMU data
-		self.ax3.clear()
+		self.imu_ax3.clear()
 
-		self.ax3.set_title('IMU orientation over time')
-		self.ax3.set_xlabel('Time (seconds)')
-		self.ax3.set_ylabel('Euler Angle Values (rads)')
+		self.imu_ax3.set_title('IMU orientation over time')
+		self.imu_ax3.set_xlabel('Time (seconds)')
+		self.imu_ax3.set_ylabel('Euler Angle Values (rads)')
 
 		# Plot roll over time
-		roll, = self.ax3.plot(self.vn_time_ar, self.vn_roll_ar)
+		roll, = self.imu_ax3.plot(self.vn_time_ar, self.vn_roll_ar)
 		roll.set_label("Roll") # Label the line
 
 		# Plot pitch over time
-		pitch, = self.ax3.plot(self.vn_time_ar, self.vn_pitch_ar)
+		pitch, = self.imu_ax3.plot(self.vn_time_ar, self.vn_pitch_ar)
 		pitch.set_label("Pitch") # Label the line
 
 		# Plot yaw over time
-		yaw, = self.ax3.plot(self.vn_time_ar, self.vn_yaw_ar)
+		yaw, = self.imu_ax3.plot(self.vn_time_ar, self.vn_yaw_ar)
 		yaw.set_label("Yaw") # Label the line
 
 		# Show the legend for the various lines
-		self.ax3.legend()
+		self.imu_ax3.legend()
+
+# Class for visualizing robot state data from the DVL
+class DVLVisualizer(object):
+	# Initialization function to setup variables
+	def __init__(self):
+		# Variables to be used for the plot
+		self.DVL_fig, (self.DVL_ax1, self.DVL_ax2) = plt.subplots(2,1)
+
+		# Lists for holding values from our state messages
+		self.x_dot_ar = []
+		self.y_dot_ar = []
+		self.z_dot_ar = []
+		self.time_ar = []
+
+		# Variables for setting up time to plot against
+		self.started = False
+		self.start_time = rospy.Time.now()
 
 
+		# Lists for holding values from our unfiltered state messages
+		self.uf_x_dot_ar = []
+		self.uf_y_dot_ar = []
+		self.uf_z_dot_ar = []
+		self.uf_time_ar = []
 
+		# Variables for setting up time to plot against
+		self.uf_started = False
+		self.uf_start_time = rospy.Time.now()
+
+	# Callback function for gathering the filtered DVL data
+	def ekfDVLCallback(self, state_msg):
+		# Get the start time to make graphing look better
+		if(self.started == False):
+			self.start_time = rospy.Time.now()
+			self.started = True
+
+		# Append values from state_msg into their proper arrays
+		self.x_dot_ar.append(state_msg.x_dot)
+		self.y_dot_ar.append(state_msg.y_dot)
+		self.z_dot_ar.append(state_msg.z_dot)
+
+		# Update time array with latest time since start
+		self.time_ar.append(state_msg.header.stamp.secs - self.start_time.secs)
+
+
+	# Callback function for gathering unfiltered DVL data
+	def unfiltDVLCallback(self, state_msg):
+		# Get the start time to make graphing look better
+		if(self.uf_started == False):
+			self.uf_start_time = rospy.Time.now()
+			self.uf_started = True
+
+		# Append values from state_msg into their proper arrays
+		self.uf_x_dot_ar.append(state_msg.x_dot)
+		self.uf_y_dot_ar.append(state_msg.y_dot)
+		self.uf_z_dot_ar.append(state_msg.z_dot)
+
+		# Update time array with latest time since start
+		self.uf_time_ar.append(state_msg.header.stamp.secs - self.uf_start_time.secs)
+
+
+	# Plots the newest data from either the DVL or the EKF on the plot
+	def plotDVLData(self, data):
+		# UNFILTERED ROBOT Velocity
+		# Clear the previous data
+		self.DVL_ax1.clear()
+
+		# Set title and lables for the plot
+		# TODO: Find a way to only have the plotted data cleared so we don't have to redo these every time
+		self.DVL_ax1.set_title('Unfiltered Velocity over time')
+		self.DVL_ax1.set_ylabel('Velocity (m/s)')
+
+		# Plot x_dot over time
+		x_dot, = self.DVL_ax1.plot(self.uf_time_ar, self.uf_x_dot_ar)
+		x_dot.set_label("x_dot") # Label the line
+
+		# Plot y_dot over time
+		y_dot, = self.DVL_ax1.plot(self.uf_time_ar, self.uf_y_dot_ar)
+		y_dot.set_label("Y_dot") # Label the line
+
+		# Plot z_dot over time
+		z_dot, = self.DVL_ax1.plot(self.uf_time_ar, self.uf_z_dot_ar)
+		z_dot.set_label("Z_dot") # Label the line
+
+		# Show the legend for the various lines
+		self.DVL_ax1.legend()
+
+		# FILTERED ROBOT Velocity
+		# Clear the previous data
+		self.DVL_ax2.clear()
+
+		# Set title and lables for the plot
+		# TODO: Find a way to only have the plotted data cleared so we don't have to redo these every time
+		self.DVL_ax2.set_title('Filtered Velocity over time')
+		self.DVL_ax2.set_xlabel('Time (seconds)')
+		self.DVL_ax2.set_ylabel('Velocity (m/s)')
+
+		# Plot x_dot over time
+		x_dot, = self.DVL_ax2.plot(self.time_ar, self.x_dot_ar)
+		x_dot.set_label("X_dot") # Label the line
+
+		# Plot y_dot over time
+		y_dot, = self.DVL_ax2.plot(self.time_ar, self.y_dot_ar)
+		y_dot.set_label("Y_dot") # Label the line
+
+		# Plot z_dot over time
+		z_dot, = self.DVL_ax2.plot(self.time_ar, self.z_dot_ar)
+		z_dot.set_label("Z_dot") # Label the line
+
+		# Show the legend for the various lines
+		self.DVL_ax2.legend()
 
 
 if __name__ == "__main__":
 	# Initialize the ROS node
 	rospy.init_node("ekf_visualizer", anonymous=True)
 
-	# Visualizer object which will be used to keep track of the robot state and plot it
-	vis = Visualizer()
+	# Visualizer object which will be used to keep track of the IMU state and plot it
+	imu_vis = IMUVisualizer()
 
-	# Subscriber for our robot state topic
-	rospy.Subscriber('/filtered_state', robot_state, vis.ekfStateCallback)
+	# Visualizer object which will be used to keep track of the DVL state and plot it
+	dvl_vis = DVLVisualizer()
 
-	# Subsriber for the unfiltered state
-	rospy.Subscriber('/unfiltered_state', robot_state, vis.unfiltStateCallback)
+	# Subscriber for filtered IMU state 
+	rospy.Subscriber('/imu_filtered_state', robot_state, imu_vis.ekfIMUStateCallback)
+
+	# Subsriber for the unfiltered IMU state
+	rospy.Subscriber('/imu_unfiltered_state', robot_state, imu_vis.unfiltIMUStateCallback)
 
 	# Subscriber for robot state from pure IMU data
-	rospy.Subscriber('/vn_state', robot_state, vis.vnStateCallback)
+	rospy.Subscriber('/vn_state', robot_state, imu_vis.vnStateCallback)
 
-	# TODO: Setup subsriber for raw state
+	# Subsriber for filtered DVL state
+	rospy.Subscriber('/dvl_filtered_state', robot_state, dvl_vis.ekfDVLCallback)
+
+	# Subscriber for unfiltered DVL state
+	rospy.Subscriber('/dvl_unfiltered_state', robot_state, dvl_vis.unfiltDVLCallback)
 
 	# Set the figure to update every second using the plotData function in the Visualizer class
 	# The plotData function will clear the previous data and replot with any new data received
@@ -235,7 +322,10 @@ if __name__ == "__main__":
 	# * interval must not update the graph faster than the rate at which data is produced or else 
 	# * the array of time data will become larger than the array of sensor data and break the graph
 	# TODO: Find a workaround for this. Possibly only add time to time array when it won't become larger than sensor data array 
-	ani = animation.FuncAnimation(vis.fig, vis.plotData, interval=1000)
+	IMU_ani = animation.FuncAnimation(imu_vis.imu_fig, imu_vis.plotIMUData, interval=1000)
+	
+	# Updating plot for DVL data
+	DVL_ani = animation.FuncAnimation(dvl_vis.DVL_fig, dvl_vis.plotDVLData, interval=1000)
 	
 	# Display the plot
 	plt.show()

@@ -63,11 +63,18 @@ private:
 	// VectorNav Robot state publisher
 	ros::Publisher vn_state_pub_ = n_.advertise<EKF::robot_state>("/vn_state", 100);
 
-	// Filtered state publisher
-	ros::Publisher filtered_state_pub_ = n_.advertise<EKF::robot_state>("/filtered_state", 100);
+	// IMU Filtered state publisher
+	ros::Publisher imu_filtered_state_pub_ = n_.advertise<EKF::robot_state>("/imu_filtered_state", 100);
 
-	// Unfiltered state publisher
-	ros::Publisher unfiltered_state_pub_ = n_.advertise<EKF::robot_state>("/unfiltered_state", 100);
+	// IMU Unfiltered state publisher
+	ros::Publisher imu_unfiltered_state_pub_ = n_.advertise<EKF::robot_state>("/imu_unfiltered_state", 100);
+
+	// DVL Filtered state publisher
+	ros::Publisher dvl_filtered_state_pub_ = n_.advertise<EKF::robot_state>("/dvl_filtered_state", 100);
+
+	// DVL Unfiltered state publisher
+	ros::Publisher dvl_unfiltered_state_pub_ = n_.advertise<EKF::robot_state>("/dvl_unfiltered_state", 100);
+
 
 	// Variable to keep track of the previous time so we can find difference between timestamps
 	float previous_timestamp_;
@@ -159,8 +166,10 @@ public:
 			}
 		}
 
-		// Initialize IMU measurement matrix
-		H_IMU_ = MatrixXd(6, 12);
+		// ############## IMU SPECIFIC MATRICES ####################
+
+		// Initialize IMU measurement mapping matrix
+		H_IMU_ = MatrixXd(6, 12); //6x12 because we need to get roll, pitch, yaw and their derivatives from the state matrix
 
 		// Zero out the whole matrix to start
 		H_IMU_.setZero();
@@ -198,40 +207,84 @@ public:
 			// Gyroscope noise used to find angular velocity
 			else
 			{
-				R_IMU_(i, i) = .035; //.035
+				R_IMU_(i, i) = .01; //.035
 			}			
 		}
+		// ############## IMU SPECIFIC MATRICES ####################
 
-		// ? Try using an identity matrix for this
+		// ############## DVL SPECIFIC MATRICES ####################
+		// Initialize DVL Measurement mapping matrix H_DVL_
+		H_DVL_ = MatrixXd(3, 12); // 3x12 because we need to get x_dot, y_dot, and z_dot from the state matrix
+
+		// Start the matrix as zeros
+		H_DVL_.setZero();
+
+		for(int i = 0; i < 3; i++)
+		{
+			// Set the 6th, 7th, and 8th index of rows 1, 2, and 3 respectively equal to 1
+			H_DVL_(i, i+6) = 1;
+		}
+
+		// Initialize the DVL measurement noise matrix R_DVL_
+		R_DVL_ = MatrixXd(3, 3); // 3x3 because we need noise for the x_dot, y_dot, and z_dot measurements
+
+		// Start with the matrix as zeros
+		R_DVL_.setZero();
+
+		// Values taken from RTI site but need to double check
+		// Gave range of .05 m/s to .2m/s
+		for(int i = 0; i < 3; i++)
+		{
+			// TODO: tune this value
+			R_DVL_(i, i) = .2;
+		}
+		// ############## DVL SPECIFIC MATRICES ####################
+
+		// Initialize process noise covariance matrix Q
 		Q_ = MatrixXd(12, 12);
+
+		Q_.setZero();
 
 		// Initialize the process noise matrix
 		for(int i = 0; i < 12; i++)
 		{
 			for(int j = 0; j < 12; j++)
 			{
+				// TODO: Can probably make this a switch statement
 				// Initialize position variables along the diagonal to have a covariance of 1
 				// The main diagonal can be represented by when i is equal to j
 				// We use i < 6 because rows 0 through 5 will be for the position variables
 				// x, y, z, roll, pitch, yaw 
-				if(i == j and i < 6)
-				{
-					Q_(i, j) = .001;
-				}
-
-				// Initialize derivate position variables along the diagonal to have a covariance of 1000
-				// Rows 6 through 11 will be for the derivatives of the positions variables
-				// x_dot, y_dot, z_dot, roll_dot, pitch_dot, yaw_dot
-				else if(i == j and i >= 6)
-				{
-					Q_(i, j) = .001;
-				}
-				
-				// Fill the rest with 0's to start off
-				else
+				if(i == j and i < 3)
 				{
 					Q_(i, j) = 0;
 				}
+
+
+				// IMU Process noise initialization for Roll, pitch, and yaw
+				else if(i == j and i < 6 and i >= 3)
+				{
+					Q_(i, j) = .00001;
+				}
+
+				// DVL Process noise initialization for x_dot, y_dot, z_dot
+				else if(i == j and i >=6 and i < 10)
+				{
+					// TODO: Tune this value
+					Q_(i, j) = .0001;
+				}
+
+				// IMU process noise initialization for roll_dot, pitch_dot, yaw_dot
+				else if(i == j and i >= 9 and i < 12)
+				{
+					Q_(i, j) = .00001;
+				}
+				
+				// Fill the rest with 0's to start off
+				// else
+				// {
+				// 	Q_(i, j) = 0;
+				// }
 			}
 		}
 
@@ -274,9 +327,9 @@ public:
 
 			// Update derivatives of orientation variables
 			// ! Change these back to positive posibbly
-			state_(9) = -imu_msg.angular_velocity.x; // roll_dot
-			state_(10) = -imu_msg.angular_velocity.y; // pitch_dot
-			state_(11) = 0; // -imu_msg.angular_velocity.z; // yaw_dot // ! Change this back from 0
+			state_(9) = imu_msg.angular_velocity.x; // roll_dot
+			state_(10) = imu_msg.angular_velocity.y; // pitch_dot
+			state_(11) = 0; // imu_msg.angular_velocity.z; // yaw_dot // ! Change this back from 0
 
 			// Mark the state as initilized
 			is_initialized_ = true;
@@ -319,18 +372,42 @@ public:
 		// 	depth_msg_ = nullptr;
 		// }
 
-		// // Check if a DVL message is available
-		// if(DVL_msg_ != nullptr)
-		// {
-		// 	// If a DVL message is ready then update the state using the message
-		// 	DVLKalmanUpdate();
+		// Check if a DVL message is available
+		if(DVL_msg_ != nullptr)
+		{
+			// TODO: Remove this later. Just for testing
+			EKF::robot_state uf_dvl;
 
-		// 	// Free the memory being using by the DVL msg object
-		// 	delete DVL_msg_;
+			uf_dvl.header.stamp = DVL_msg_->header.stamp;
+			uf_dvl.x_dot = DVL_msg_->velocity.x;
+			uf_dvl.y_dot = DVL_msg_->velocity.y;
+			uf_dvl.z_dot = DVL_msg_->velocity.z;
 
-		// 	// Set the variable to nullptr so this doens't trigger again until we've received a new message
-		// 	DVL_msg_ = nullptr;
-		// }
+			dvl_unfiltered_state_pub_.publish(uf_dvl);
+
+			// If a DVL message is ready then update the state using the message
+			DVLKalmanUpdate();
+
+			// TODO: Remove this later. Just for testing
+			EKF::robot_state filt_dvl;
+
+			filt_dvl.header.stamp = DVL_msg_->header.stamp;
+			filt_dvl.x_dot = state_(6);
+			filt_dvl.y_dot = state_(7);
+			filt_dvl.z_dot = state_(8);
+
+			dvl_filtered_state_pub_.publish(filt_dvl);
+
+			// cout << "DVL Message" << endl;
+			// cout << *DVL_msg_ << endl;
+			// cout << "\n" <<endl;
+
+			// Free the memory being using by the DVL msg object
+			delete DVL_msg_;
+
+			// Set the variable to nullptr so this doens't trigger again until we've received a new message
+			DVL_msg_ = nullptr;
+		}
 
 
 		// Update measurement state mapping matrix H and sensor covariance matrix R
@@ -388,9 +465,9 @@ public:
 		filtered_state.pitch = state_[4];
 		filtered_state.yaw = state_[5];
 
-		filtered_state_pub_.publish(filtered_state);
+		imu_filtered_state_pub_.publish(filtered_state);
 
-		printState();
+		// printState();
 	}
 
 	// Callback function for the depth messages from the bar30 Depth sensor
@@ -454,40 +531,24 @@ public:
 		uf_state.pitch = pitch;
 		uf_state.yaw = yaw;
 
-		unfiltered_state_pub_.publish(uf_state);
+		imu_unfiltered_state_pub_.publish(uf_state);
 
 		// Fill measurement vector z with roll, pitch, yaw, and derivatives values
 		VectorXd z_meas(6);
 
 		// Put values into the vector
 		z_meas << roll, pitch, yaw, // roll, pitch, yaw
-			 -imu_msg.angular_velocity.x, // roll_dot
-			 -imu_msg.angular_velocity.y, // pitch_dot
-			 0; //-imu_msg.angular_velocity.z; // yaw_dot // ! Change this back from 0
-		// ! Change these back to positive possibly
+			 imu_msg.angular_velocity.x, // roll_dot
+			 imu_msg.angular_velocity.y, // pitch_dot
+			 0; //imu_msg.angular_velocity.z; // yaw_dot // ! Change this back from 0
 
 		VectorXd z_pred = H_IMU_ *state_;
 
-		// cout << "z_meas \n" << z_meas << endl;
-
-		// cout << "State \n" << state_ << endl;
-
-		// cout << "z_pred \n" << z_pred << endl;
-
 		VectorXd y = z_meas - z_pred; // Measurement error
-
-		// cout << "Y \n" << y << endl;
 
 		MatrixXd S = H_IMU_ * cov_ * (H_IMU_.transpose()) + R_IMU_;
 
-		// cout << "S \n" << S << endl;
-
-		// TODO: Figure out why Kalman gain is always near 0
 		MatrixXd K = cov_ * (H_IMU_.transpose()) * (S.inverse()); // Kalman gain
-
-		// cout << "Kalman gain" << endl;
-		// cout << K << endl;
-		// cout << "\n";
 
 		// Get new state
 		state_ = state_ + K*y;
@@ -511,6 +572,28 @@ public:
 	{
 		// TODO: Add the Kalman Filter update stuff for the DVL
 		// ! Message data to us is stored in DVL_msg_
+
+		// Fill measurement vector z with roll, pitch, yaw, and derivatives values
+		VectorXd z_meas(3);
+
+		// Put values into the vector
+		z_meas << DVL_msg_->velocity.x, DVL_msg_->velocity.y, DVL_msg_->velocity.z;
+
+		VectorXd z_pred = H_DVL_ *state_;
+
+		VectorXd y = z_meas - z_pred; // Measurement error
+
+		MatrixXd S = H_DVL_ * cov_ * (H_DVL_.transpose()) + R_DVL_;
+
+		MatrixXd K = cov_ * (H_DVL_.transpose()) * (S.inverse()); // Kalman gain
+
+		// Get new state
+		state_ = state_ + K*y;
+
+		// Create identity matrix and use it to update state covariance matrix
+		MatrixXd I = MatrixXd::Identity(state_.size(), state_.size());
+
+		cov_ = (I - K*H_DVL_)*cov_;
 	}
 
 
@@ -529,12 +612,12 @@ public:
 		// cout << F_ << endl;
 		// cout << "\n";
 
-		// cout << "IMU H Matrix" << endl;
-		// cout << H_IMU_ << endl;
+		// cout << "DVL H Matrix" << endl;
+		// cout << H_DVL_ << endl;
 		// cout << "\n";
 
-		// cout << "IMU R Matrix" << endl;
-		// cout << R_IMU_ << endl;
+		// cout << "DVL R Matrix" << endl;
+		// cout << R_DVL_ << endl;
 		// cout << "\n";
 
 		// cout << "Q Matrix" << endl;
