@@ -88,6 +88,9 @@ private:
 	// Variable for storing the most recent DVL sensor message
 	rti_dvl::DVL* DVL_msg_ = nullptr;
 
+	// Define the max robot velocity. Used to filter out noisy values from DVL
+	const float MAX_VEL = 5.0;
+
 
 public:
 	// Constructor 
@@ -236,7 +239,7 @@ public:
 		for(int i = 0; i < 3; i++)
 		{
 			// TODO: tune this value
-			R_DVL_(i, i) = .2;
+			R_DVL_(i, i) = .4;
 		}
 		// ############## DVL SPECIFIC MATRICES ####################
 
@@ -271,7 +274,7 @@ public:
 				else if(i == j and i >=6 and i < 10)
 				{
 					// TODO: Tune this value
-					Q_(i, j) = .0001;
+					Q_(i, j) = .00001;
 				}
 
 				// IMU process noise initialization for roll_dot, pitch_dot, yaw_dot
@@ -378,10 +381,29 @@ public:
 			// TODO: Remove this later. Just for testing
 			EKF::robot_state uf_dvl;
 
+			// Temp variables to make code look cleaner
+			float x_vel = DVL_msg_->velocity.x;
+			float y_vel = DVL_msg_->velocity.y;
+			float z_vel = DVL_msg_->velocity.z;
+
+			// TODO: make these real filters
+			if(abs(x_vel) > MAX_VEL)
+			{
+				x_vel = 0;
+			}
+			if(abs(y_vel) > MAX_VEL)
+			{
+				y_vel = 0;
+			}
+			if(abs(z_vel) > MAX_VEL)
+			{
+				z_vel = 0;
+			}
+
 			uf_dvl.header.stamp = DVL_msg_->header.stamp;
-			uf_dvl.x_dot = DVL_msg_->velocity.x;
-			uf_dvl.y_dot = DVL_msg_->velocity.y;
-			uf_dvl.z_dot = DVL_msg_->velocity.z;
+			uf_dvl.x_dot = x_vel;
+			uf_dvl.y_dot = y_vel;
+			uf_dvl.z_dot = z_vel;
 
 			dvl_unfiltered_state_pub_.publish(uf_dvl);
 
@@ -467,7 +489,7 @@ public:
 
 		imu_filtered_state_pub_.publish(filtered_state);
 
-		// printState();
+		printState();
 	}
 
 	// Callback function for the depth messages from the bar30 Depth sensor
@@ -571,13 +593,33 @@ public:
 	void DVLKalmanUpdate()
 	{
 		// TODO: Add the Kalman Filter update stuff for the DVL
-		// ! Message data to us is stored in DVL_msg_
-
 		// Fill measurement vector z with roll, pitch, yaw, and derivatives values
 		VectorXd z_meas(3);
 
+		// ! May need to add averaging or high pass filter here to filter out the massive jumps in
+		// velocity
+
+		// Temp variables to make code look cleaner
+		float x_vel = DVL_msg_->velocity.x;
+		float y_vel = DVL_msg_->velocity.y;
+		float z_vel = DVL_msg_->velocity.z;
+
+		// TODO: make these real filters
+		if(abs(x_vel) > MAX_VEL)
+		{
+			x_vel = 0;
+		}
+		if(abs(y_vel) > MAX_VEL)
+		{
+			y_vel = 0;
+		}
+		if(abs(z_vel) > MAX_VEL)
+		{
+			z_vel = 0;
+		}
+
 		// Put values into the vector
-		z_meas << DVL_msg_->velocity.x, DVL_msg_->velocity.y, DVL_msg_->velocity.z;
+		z_meas << x_vel, y_vel, z_vel;
 
 		VectorXd z_pred = H_DVL_ *state_;
 
@@ -600,9 +642,9 @@ public:
 	// Prints out the current state matrix and covariance state matrix for debugging purposes
 	void printState()
 	{
-		cout << "State:" << endl;
-		cout << state_ << endl;
-		cout << "\n";
+		// cout << "State:" << endl;
+		// cout << state_ << endl;
+		// cout << "\n";
 
 		cout << "Covariance:" << endl;
 		cout << cov_ << endl;

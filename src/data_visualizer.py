@@ -296,25 +296,16 @@ if __name__ == "__main__":
 	rospy.init_node("ekf_visualizer", anonymous=True)
 
 	# Visualizer object which will be used to keep track of the IMU state and plot it
-	imu_vis = IMUVisualizer()
+	# imu_vis = IMUVisualizer()
 
-	# Visualizer object which will be used to keep track of the DVL state and plot it
-	dvl_vis = DVLVisualizer()
+	# # Subscriber for filtered IMU state 
+	# rospy.Subscriber('/imu_filtered_state', robot_state, imu_vis.ekfIMUStateCallback)
 
-	# Subscriber for filtered IMU state 
-	rospy.Subscriber('/imu_filtered_state', robot_state, imu_vis.ekfIMUStateCallback)
+	# # Subsriber for the unfiltered IMU state
+	# rospy.Subscriber('/imu_unfiltered_state', robot_state, imu_vis.unfiltIMUStateCallback)
 
-	# Subsriber for the unfiltered IMU state
-	rospy.Subscriber('/imu_unfiltered_state', robot_state, imu_vis.unfiltIMUStateCallback)
-
-	# Subscriber for robot state from pure IMU data
-	rospy.Subscriber('/vn_state', robot_state, imu_vis.vnStateCallback)
-
-	# Subsriber for filtered DVL state
-	rospy.Subscriber('/dvl_filtered_state', robot_state, dvl_vis.ekfDVLCallback)
-
-	# Subscriber for unfiltered DVL state
-	rospy.Subscriber('/dvl_unfiltered_state', robot_state, dvl_vis.unfiltDVLCallback)
+	# # Subscriber for robot state from pure IMU data
+	# rospy.Subscriber('/vn_state', robot_state, imu_vis.vnStateCallback)
 
 	# Set the figure to update every second using the plotData function in the Visualizer class
 	# The plotData function will clear the previous data and replot with any new data received
@@ -322,8 +313,17 @@ if __name__ == "__main__":
 	# * interval must not update the graph faster than the rate at which data is produced or else 
 	# * the array of time data will become larger than the array of sensor data and break the graph
 	# TODO: Find a workaround for this. Possibly only add time to time array when it won't become larger than sensor data array 
-	IMU_ani = animation.FuncAnimation(imu_vis.imu_fig, imu_vis.plotIMUData, interval=1000)
-	
+	# IMU_ani = animation.FuncAnimation(imu_vis.imu_fig, imu_vis.plotIMUData, interval=1000)
+
+	# Visualizer object which will be used to keep track of the DVL state and plot it
+	dvl_vis = DVLVisualizer()
+
+	# Subsriber for filtered DVL state
+	rospy.Subscriber('/dvl_filtered_state', robot_state, dvl_vis.ekfDVLCallback)
+
+	# Subscriber for unfiltered DVL state
+	rospy.Subscriber('/dvl_unfiltered_state', robot_state, dvl_vis.unfiltDVLCallback)
+
 	# Updating plot for DVL data
 	DVL_ani = animation.FuncAnimation(dvl_vis.DVL_fig, dvl_vis.plotDVLData, interval=1000)
 	
