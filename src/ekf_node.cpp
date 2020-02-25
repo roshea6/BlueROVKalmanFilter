@@ -483,9 +483,15 @@ public:
 		// Set the timestamp for the message
 		filtered_state.header.stamp = ros::Time::now();  //imu_msg.header.stamp;
 
+		filtered_state.x = state_[0];
+		filtered_state.y = state_[1];
+		filtered_state.z = state_[2];
 		filtered_state.roll = state_[3]; 
 		filtered_state.pitch = state_[4];
 		filtered_state.yaw = state_[5];
+		filtered_state.x_dot = state_[6];
+		filtered_state.y_dot = state_[7];
+		filtered_state.z_dot = state_[8];
 
 		imu_filtered_state_pub_.publish(filtered_state);
 
