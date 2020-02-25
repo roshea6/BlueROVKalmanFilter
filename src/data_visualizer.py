@@ -25,6 +25,13 @@ class IMUVisualizer(object):
 		# Variables to be used for the plot
 		self.imu_fig, (self.imu_ax1, self.imu_ax2) = plt.subplots(2,1)
 
+		# Set the space between sublots
+		self.imu_fig.subplots_adjust(hspace=.4)
+
+		# Set the font size of the axis numbers
+		self.imu_ax1.tick_params(labelsize=24)
+		self.imu_ax2.tick_params(labelsize=24)
+
 		# Lists for holding values from our state messages
 		self.roll_ar = []
 		self.pitch_ar = []
@@ -56,11 +63,11 @@ class IMUVisualizer(object):
 		self.vn_start_time = rospy.Time.now()
 
 		# Max and min y values for the plot
-		self.PLOT_Y_MAX = .85
-		self.PLOT_Y_MIN = -.15
+		self.PLOT_Y_MAX = 1.5
+		self.PLOT_Y_MIN = -.5
 
 		# Graph interval
-		self.INTERVAL = 2
+		self.INTERVAL = 15
 
 
 	# Recieves messages directly from the IMU topic and plots it
@@ -125,7 +132,7 @@ class IMUVisualizer(object):
 		# Set title and lables for the plot
 		# TODO: Find a way to only have the plotted data cleared so we don't have to redo these every time
 		self.imu_ax1.set_title('Unfiltered Orientation')
-		self.imu_ax1.set_ylabel('Euler Angle Values (rads)')
+		self.imu_ax1.set_ylabel('Euler Angles(rads)', fontsize=30)
 
 		# ! Comment these out to let the graph just do it automatically
 		# Set Y axis range for graph to make it look better
@@ -147,7 +154,7 @@ class IMUVisualizer(object):
 		yaw.set_label("Yaw") # Label the line
 
 		# Show the legend for the various lines
-		self.imu_ax1.legend()
+		self.imu_ax1.legend(loc=2)
 
 		# FILTERED ROBOT ORIENTATION
 		# Clear the previous data
@@ -157,7 +164,7 @@ class IMUVisualizer(object):
 		# TODO: Find a way to only have the plotted data cleared so we don't have to redo these every time
 		self.imu_ax2.set_title('Filtered Orientation')
 		self.imu_ax2.set_xlabel('Time (seconds)')
-		self.imu_ax2.set_ylabel('Euler Angle Values (rads)')
+		self.imu_ax2.set_ylabel('Euler Angles (rads)', fontsize=30)
 
 		# ! Comment these out to let the graph just do it automatically
 		# Set Y axis range to make graphs look better 
@@ -179,7 +186,7 @@ class IMUVisualizer(object):
 		yaw.set_label("Yaw") # Label the line
 
 		# Show the legend for the various lines
-		self.imu_ax2.legend()
+		self.imu_ax2.legend(loc=2)
 
 		# IMU ROBOT ORIENTATION
 		# Plot for IMU data
@@ -210,6 +217,13 @@ class DVLVisualizer(object):
 	def __init__(self):
 		# Variables to be used for the plot
 		self.DVL_fig, (self.DVL_ax1, self.DVL_ax2) = plt.subplots(2,1)
+
+		# Set the space between sublots
+		self.DVL_fig.subplots_adjust(hspace=.4)
+
+		# Set the font size of the axis numbers
+		self.DVL_ax1.tick_params(labelsize=24)
+		self.DVL_ax2.tick_params(labelsize=24)
 
 		# Lists for holding values from our state messages
 		self.x_dot_ar = []
@@ -291,18 +305,18 @@ class DVLVisualizer(object):
 
 		# Plot x_dot over time
 		x_dot, = self.DVL_ax1.plot(self.uf_time_ar, self.uf_x_dot_ar)
-		x_dot.set_label("x_dot") # Label the line
+		x_dot.set_label("X Vel") # Label the line
 
 		# Plot y_dot over time
 		y_dot, = self.DVL_ax1.plot(self.uf_time_ar, self.uf_y_dot_ar)
-		y_dot.set_label("Y_dot") # Label the line
+		y_dot.set_label("Y Vel") # Label the line
 
 		# Plot z_dot over time
 		z_dot, = self.DVL_ax1.plot(self.uf_time_ar, self.uf_z_dot_ar)
-		z_dot.set_label("Z_dot") # Label the line
+		z_dot.set_label("Z Vel") # Label the line
 
 		# Show the legend for the various lines
-		self.DVL_ax1.legend()
+		self.DVL_ax1.legend(loc=2)
 
 		# FILTERED ROBOT Velocity
 		# Clear the previous data
@@ -324,21 +338,25 @@ class DVLVisualizer(object):
 
 		# Plot x_dot over time
 		x_dot, = self.DVL_ax2.plot(self.time_ar, self.x_dot_ar)
-		x_dot.set_label("X_dot") # Label the line
+		x_dot.set_label("X Vel") # Label the line
 
 		# Plot y_dot over time
 		y_dot, = self.DVL_ax2.plot(self.time_ar, self.y_dot_ar)
-		y_dot.set_label("Y_dot") # Label the line
+		y_dot.set_label("Y Vel") # Label the line
 
 		# Plot z_dot over time
 		z_dot, = self.DVL_ax2.plot(self.time_ar, self.z_dot_ar)
-		z_dot.set_label("Z_dot") # Label the line
+		z_dot.set_label("Z Vel") # Label the line
 
 		# Show the legend for the various lines
-		self.DVL_ax2.legend()
+		self.DVL_ax2.legend(loc=2)
 
 
 if __name__ == "__main__":
+	# Set The font sizes for plots 
+	plt.rcParams.update({'font.size': 34,
+						'legend.fontsize': 20})
+
 	# Initialize the ROS node
 	rospy.init_node("ekf_visualizer", anonymous=True)
 
