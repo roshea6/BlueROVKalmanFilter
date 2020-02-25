@@ -2,6 +2,7 @@
 
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
+import matplotlib.ticker as ticker
 import time
 import rospy
 
@@ -22,7 +23,7 @@ class IMUVisualizer(object):
 	# Initialization function to setup variables
 	def __init__(self):
 		# Variables to be used for the plot
-		self.imu_fig, (self.imu_ax1, self.imu_ax2, self.imu_ax3) = plt.subplots(3,1)
+		self.imu_fig, (self.imu_ax1, self.imu_ax2) = plt.subplots(2,1)
 
 		# Lists for holding values from our state messages
 		self.roll_ar = []
@@ -53,6 +54,13 @@ class IMUVisualizer(object):
 		# Variables for setting up time to plot against
 		self.vn_started = False
 		self.vn_start_time = rospy.Time.now()
+
+		# Max and min y values for the plot
+		self.PLOT_Y_MAX = .85
+		self.PLOT_Y_MIN = -.15
+
+		# Graph interval
+		self.INTERVAL = 2
 
 
 	# Recieves messages directly from the IMU topic and plots it
@@ -85,6 +93,8 @@ class IMUVisualizer(object):
 		self.pitch_ar.append(state_msg.pitch)
 		self.yaw_ar.append(state_msg.yaw)
 
+		# print "Time: " + str(state_msg.header.stamp.secs - self.start_time.secs)
+
 		# Update time array with latest time since start
 		self.time_ar.append(state_msg.header.stamp.secs - self.start_time.secs)
 
@@ -114,8 +124,15 @@ class IMUVisualizer(object):
 
 		# Set title and lables for the plot
 		# TODO: Find a way to only have the plotted data cleared so we don't have to redo these every time
-		self.imu_ax1.set_title('Unfiltered orientation over time')
+		self.imu_ax1.set_title('Unfiltered Orientation')
 		self.imu_ax1.set_ylabel('Euler Angle Values (rads)')
+
+		# ! Comment these out to let the graph just do it automatically
+		# Set Y axis range for graph to make it look better
+		self.imu_ax1.set_ylim(bottom=self.PLOT_Y_MIN, top=self.PLOT_Y_MAX) 
+
+		# Set x axis intervals to make graph look better
+		self.imu_ax1.xaxis.set_major_locator(ticker.MultipleLocator(self.INTERVAL))
 
 		# Plot roll over time
 		roll, = self.imu_ax1.plot(self.uf_time_ar, self.uf_roll_ar)
@@ -138,8 +155,16 @@ class IMUVisualizer(object):
 
 		# Set title and lables for the plot
 		# TODO: Find a way to only have the plotted data cleared so we don't have to redo these every time
-		self.imu_ax2.set_title('Filtered orientation over time')
+		self.imu_ax2.set_title('Filtered Orientation')
+		self.imu_ax2.set_xlabel('Time (seconds)')
 		self.imu_ax2.set_ylabel('Euler Angle Values (rads)')
+
+		# ! Comment these out to let the graph just do it automatically
+		# Set Y axis range to make graphs look better 
+		self.imu_ax2.set_ylim(bottom=self.PLOT_Y_MIN, top=self.PLOT_Y_MAX)
+
+		# Set x axis intervals to make graph look better
+		self.imu_ax2.xaxis.set_major_locator(ticker.MultipleLocator(self.INTERVAL))
 
 		# Plot roll over time
 		roll, = self.imu_ax2.plot(self.time_ar, self.roll_ar)
@@ -158,26 +183,26 @@ class IMUVisualizer(object):
 
 		# IMU ROBOT ORIENTATION
 		# Plot for IMU data
-		self.imu_ax3.clear()
+		# self.imu_ax3.clear()
 
-		self.imu_ax3.set_title('IMU orientation over time')
-		self.imu_ax3.set_xlabel('Time (seconds)')
-		self.imu_ax3.set_ylabel('Euler Angle Values (rads)')
+		# self.imu_ax3.set_title('IMU orientation over time')
+		# self.imu_ax3.set_xlabel('Time (seconds)')
+		# self.imu_ax3.set_ylabel('Euler Angle Values (rads)')
 
-		# Plot roll over time
-		roll, = self.imu_ax3.plot(self.vn_time_ar, self.vn_roll_ar)
-		roll.set_label("Roll") # Label the line
+		# # Plot roll over time
+		# roll, = self.imu_ax3.plot(self.vn_time_ar, self.vn_roll_ar)
+		# roll.set_label("Roll") # Label the line
 
-		# Plot pitch over time
-		pitch, = self.imu_ax3.plot(self.vn_time_ar, self.vn_pitch_ar)
-		pitch.set_label("Pitch") # Label the line
+		# # Plot pitch over time
+		# pitch, = self.imu_ax3.plot(self.vn_time_ar, self.vn_pitch_ar)
+		# pitch.set_label("Pitch") # Label the line
 
-		# Plot yaw over time
-		yaw, = self.imu_ax3.plot(self.vn_time_ar, self.vn_yaw_ar)
-		yaw.set_label("Yaw") # Label the line
+		# # Plot yaw over time
+		# yaw, = self.imu_ax3.plot(self.vn_time_ar, self.vn_yaw_ar)
+		# yaw.set_label("Yaw") # Label the line
 
-		# Show the legend for the various lines
-		self.imu_ax3.legend()
+		# # Show the legend for the various lines
+		# self.imu_ax3.legend()
 
 # Class for visualizing robot state data from the DVL
 class DVLVisualizer(object):
@@ -196,7 +221,6 @@ class DVLVisualizer(object):
 		self.started = False
 		self.start_time = rospy.Time.now()
 
-
 		# Lists for holding values from our unfiltered state messages
 		self.uf_x_dot_ar = []
 		self.uf_y_dot_ar = []
@@ -206,6 +230,13 @@ class DVLVisualizer(object):
 		# Variables for setting up time to plot against
 		self.uf_started = False
 		self.uf_start_time = rospy.Time.now()
+
+		# Max and min y values for the plot
+		self.PLOT_Y_MAX = .45
+		self.PLOT_Y_MIN = -.35
+
+		# Graph interval
+		self.INTERVAL = 20
 
 	# Callback function for gathering the filtered DVL data
 	def ekfDVLCallback(self, state_msg):
@@ -247,8 +278,16 @@ class DVLVisualizer(object):
 
 		# Set title and lables for the plot
 		# TODO: Find a way to only have the plotted data cleared so we don't have to redo these every time
-		self.DVL_ax1.set_title('Unfiltered Velocity over time')
+		self.DVL_ax1.set_title('Unfiltered Velocity')
 		self.DVL_ax1.set_ylabel('Velocity (m/s)')
+		
+		# ! Comment these out to let the graph just do it automatically
+		# Set Y axis range to make graphs look better 
+		self.DVL_ax1.set_ylim(bottom=self.PLOT_Y_MIN, top=self.PLOT_Y_MAX)
+
+		# Set x axis intervals to make graph look better
+		self.DVL_ax1.xaxis.set_major_locator(ticker.MultipleLocator(self.INTERVAL))
+
 
 		# Plot x_dot over time
 		x_dot, = self.DVL_ax1.plot(self.uf_time_ar, self.uf_x_dot_ar)
@@ -271,9 +310,17 @@ class DVLVisualizer(object):
 
 		# Set title and lables for the plot
 		# TODO: Find a way to only have the plotted data cleared so we don't have to redo these every time
-		self.DVL_ax2.set_title('Filtered Velocity over time')
+		self.DVL_ax2.set_title('Filtered Velocity')
 		self.DVL_ax2.set_xlabel('Time (seconds)')
 		self.DVL_ax2.set_ylabel('Velocity (m/s)')
+
+		# ! Comment these out to let the graph just do it automatically
+		# Set Y axis range to make graphs look better 
+		self.DVL_ax2.set_ylim(bottom=self.PLOT_Y_MIN, top=self.PLOT_Y_MAX)
+
+		# Set x axis intervals to make graph look better
+		self.DVL_ax2.xaxis.set_major_locator(ticker.MultipleLocator(self.INTERVAL))
+
 
 		# Plot x_dot over time
 		x_dot, = self.DVL_ax2.plot(self.time_ar, self.x_dot_ar)
@@ -295,7 +342,7 @@ if __name__ == "__main__":
 	# Initialize the ROS node
 	rospy.init_node("ekf_visualizer", anonymous=True)
 
-	# Visualizer object which will be used to keep track of the IMU state and plot it
+	# # Visualizer object which will be used to keep track of the IMU state and plot it
 	# imu_vis = IMUVisualizer()
 
 	# # Subscriber for filtered IMU state 
@@ -307,12 +354,12 @@ if __name__ == "__main__":
 	# # Subscriber for robot state from pure IMU data
 	# rospy.Subscriber('/vn_state', robot_state, imu_vis.vnStateCallback)
 
-	# Set the figure to update every second using the plotData function in the Visualizer class
-	# The plotData function will clear the previous data and replot with any new data received
-	# from the state callback functions
-	# * interval must not update the graph faster than the rate at which data is produced or else 
-	# * the array of time data will become larger than the array of sensor data and break the graph
-	# TODO: Find a workaround for this. Possibly only add time to time array when it won't become larger than sensor data array 
+	# # Set the figure to update every second using the plotData function in the Visualizer class
+	# # The plotData function will clear the previous data and replot with any new data received
+	# # from the state callback functions
+	# # * interval must not update the graph faster than the rate at which data is produced or else 
+	# # * the array of time data will become larger than the array of sensor data and break the graph
+	# # TODO: Find a workaround for this. Possibly only add time to time array when it won't become larger than sensor data array 
 	# IMU_ani = animation.FuncAnimation(imu_vis.imu_fig, imu_vis.plotIMUData, interval=1000)
 
 	# Visualizer object which will be used to keep track of the DVL state and plot it

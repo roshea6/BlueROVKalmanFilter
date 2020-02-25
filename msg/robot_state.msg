@@ -1,8 +1,5 @@
 # Header to keep track of message sequence and timestamp
 Header header
-  uint32 seq
-  time stamp
-  string frame_id
 
 # State variables for robot position in 6 DOF and their derivatives 
 float64 x

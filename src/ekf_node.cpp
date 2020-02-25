@@ -321,7 +321,7 @@ public:
 			float pitch = atan2(-accel_x, sqrt(accel_y*accel_y + accel_z*accel_z));
 
 			// Find yaw in radians
-			float yaw = 0; //atan2(accel_z, sqrt(accel_x*accel_x + accel_z*accel_z));
+			float yaw = atan2(accel_z, sqrt(accel_x*accel_x + accel_z*accel_z));
 
 			// Update roll, pitch, and yaw values
 			state_(3) = roll; 
@@ -332,7 +332,7 @@ public:
 			// ! Change these back to positive posibbly
 			state_(9) = imu_msg.angular_velocity.x; // roll_dot
 			state_(10) = imu_msg.angular_velocity.y; // pitch_dot
-			state_(11) = 0; // imu_msg.angular_velocity.z; // yaw_dot // ! Change this back from 0
+			state_(11) = imu_msg.angular_velocity.z; // yaw_dot // ! Change this back from 0
 
 			// Mark the state as initilized
 			is_initialized_ = true;
@@ -387,20 +387,20 @@ public:
 			float z_vel = DVL_msg_->velocity.z;
 
 			// TODO: make these real filters
-			if(abs(x_vel) > MAX_VEL)
-			{
-				x_vel = 0;
-			}
-			if(abs(y_vel) > MAX_VEL)
-			{
-				y_vel = 0;
-			}
-			if(abs(z_vel) > MAX_VEL)
-			{
-				z_vel = 0;
-			}
+			// if(abs(x_vel) > MAX_VEL)
+			// {
+			// 	x_vel = 0;
+			// }
+			// if(abs(y_vel) > MAX_VEL)
+			// {
+			// 	y_vel = 0;
+			// }
+			// if(abs(z_vel) > MAX_VEL)
+			// {
+			// 	z_vel = 0;
+			// }
 
-			uf_dvl.header.stamp = DVL_msg_->header.stamp;
+			uf_dvl.header.stamp = ros::Time::now(); //DVL_msg_->header.stamp;
 			uf_dvl.x_dot = x_vel;
 			uf_dvl.y_dot = y_vel;
 			uf_dvl.z_dot = z_vel;
@@ -413,7 +413,7 @@ public:
 			// TODO: Remove this later. Just for testing
 			EKF::robot_state filt_dvl;
 
-			filt_dvl.header.stamp = DVL_msg_->header.stamp;
+			filt_dvl.header.stamp = ros::Time::now(); //DVL_msg_->header.stamp;
 			filt_dvl.x_dot = state_(6);
 			filt_dvl.y_dot = state_(7);
 			filt_dvl.z_dot = state_(8);
@@ -446,7 +446,7 @@ public:
 		// Convert into roll, pitch, and yaw
 		// These conversions are take directly from the VectorNav Quaternion math guide 
 		// https://www.vectornav.com/docs/default-source/documentation/vn-100-documentation/AN002.pdf?sfvrsn=19ee6b9_13
-		float imu_yaw = 0; //atan2(2*(q_x*q_y + q_w*q_z), q_w*q_w - q_z*q_z - q_y*q_y + q_x*q_x);
+		float imu_yaw = atan2(2*(q_x*q_y + q_w*q_z), q_w*q_w - q_z*q_z - q_y*q_y + q_x*q_x);
 		float imu_pitch = asin(-2*(q_x*q_z - q_y*q_w));
 		float imu_roll = atan2(2*(q_y*q_z + q_x*q_w), q_w*q_w + q_z*q_z - q_y*q_y - q_x*q_x);
 
@@ -481,7 +481,7 @@ public:
 		EKF::robot_state filtered_state;
 
 		// Set the timestamp for the message
-		filtered_state.header.stamp = imu_msg.header.stamp;
+		filtered_state.header.stamp = ros::Time::now();  //imu_msg.header.stamp;
 
 		filtered_state.roll = state_[3]; 
 		filtered_state.pitch = state_[4];
@@ -531,7 +531,7 @@ public:
 		EKF::robot_state uf_state;
 
 		// Set the timestamp for the message
-		uf_state.header.stamp = imu_msg.header.stamp;
+		uf_state.header.stamp = ros::Time::now(); //imu_msg.header.stamp;
 
 		// Calclate roll, pitch and yaw from the linear acceleration values
 		// Temporary variables just to make calculations cleaner
@@ -546,7 +546,7 @@ public:
 		float pitch = atan2(-accel_x, sqrt(accel_y*accel_y + accel_z*accel_z));
 
 		// Find yaw in radians
-		float yaw = 0; //atan2(accel_z, sqrt(accel_x*accel_x + accel_z*accel_z));
+		float yaw = atan2(accel_z, sqrt(accel_x*accel_x + accel_z*accel_z));
 
 		// Update roll, pitch, and yaw values
 		uf_state.roll = roll; 
@@ -562,7 +562,7 @@ public:
 		z_meas << roll, pitch, yaw, // roll, pitch, yaw
 			 imu_msg.angular_velocity.x, // roll_dot
 			 imu_msg.angular_velocity.y, // pitch_dot
-			 0; //imu_msg.angular_velocity.z; // yaw_dot // ! Change this back from 0
+			 imu_msg.angular_velocity.z; // yaw_dot // ! Change this back from 0
 
 		VectorXd z_pred = H_IMU_ *state_;
 
