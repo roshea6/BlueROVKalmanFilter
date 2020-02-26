@@ -351,6 +351,122 @@ class DVLVisualizer(object):
 		# Show the legend for the various lines
 		self.DVL_ax2.legend(loc=2)
 
+# Class for visualizing robot state data from the Depth sensor
+class DepthVisualizer(object):
+	# Initialization function to setup variables
+	def __init__(self):
+		# Variables to be used for the plot
+		self.Depth_fig, (self.Depth_ax1, self.Depth_ax2) = plt.subplots(2,1)
+
+		# Set the space between sublots
+		self.Depth_fig.subplots_adjust(hspace=.4)
+
+		# Set the font size of the axis numbers
+		self.Depth_ax1.tick_params(labelsize=24)
+		self.Depth_ax2.tick_params(labelsize=24)
+
+		# Lists for holding values from our state messages
+		self.depth_ar = []
+		self.time_ar = []
+
+		# Variables for setting up time to plot against
+		self.started = False
+		self.start_time = rospy.Time.now()
+
+		# Lists for holding values from our unfiltered state messages
+		self.uf_depth_ar = []
+		self.uf_time_ar = []
+
+		# Variables for setting up time to plot against
+		self.uf_started = False
+		self.uf_start_time = rospy.Time.now()
+
+		# Max and min y values for the plot
+		self.PLOT_Y_MAX = 4
+		self.PLOT_Y_MIN = -2
+
+		# Graph interval
+		self.INTERVAL = 20
+
+	# Callback function for gathering the filtered depth data
+	def ekfDepthCallback(self, state_msg):
+		# Get the start time to make graphing look better
+		if(self.started == False):
+			self.start_time = rospy.Time.now()
+			self.started = True
+
+		# Append values from state_msg into their proper arrays
+		self.depth_ar.append(state_msg.z)
+
+		# Update time array with latest time since start
+		self.time_ar.append(state_msg.header.stamp.secs - self.start_time.secs)
+
+
+	# Callback function for gathering unfiltered Depth data
+	def unfiltDepthCallback(self, state_msg):
+		# Get the start time to make graphing look better
+		if(self.uf_started == False):
+			self.uf_start_time = rospy.Time.now()
+			self.uf_started = True
+
+		# Append values from state_msg into their proper arrays
+		self.uf_depth_ar.append(state_msg.z)
+
+		# Update time array with latest time since start
+		self.uf_time_ar.append(state_msg.header.stamp.secs - self.uf_start_time.secs)
+
+
+	# Plots the newest data from either the Depth or the EKF on the plot
+	def plotDepthData(self, data):
+		# UNFILTERED ROBOT Velocity
+		# Clear the previous data
+		self.Depth_ax1.clear()
+
+		# Set title and lables for the plot
+		# TODO: Find a way to only have the plotted data cleared so we don't have to redo these every time
+		self.Depth_ax1.set_title('Unfiltered Depth')
+		self.Depth_ax1.set_ylabel('Depth (m)')
+		
+		# ! Comment these out to let the graph just do it automatically
+		# # Set Y axis range to make graphs look better 
+		# self.Depth_ax1.set_ylim(bottom=self.PLOT_Y_MIN, top=self.PLOT_Y_MAX)
+
+		# # Set x axis intervals to make graph look better
+		# self.Depth_ax1.xaxis.set_major_locator(ticker.MultipleLocator(self.INTERVAL))
+
+
+		# Plot depth over time
+		depth, = self.Depth_ax1.plot(self.uf_time_ar, self.uf_depth_ar)
+		depth.set_label("Depth") # Label the line
+
+		# Show the legend for the various lines
+		self.Depth_ax1.legend(loc=2)
+
+		# FILTERED ROBOT Velocity
+		# Clear the previous data
+		self.Depth_ax2.clear()
+
+		# Set title and lables for the plot
+		# TODO: Find a way to only have the plotted data cleared so we don't have to redo these every time
+		self.Depth_ax2.set_title('Filtered Depth')
+		self.Depth_ax2.set_xlabel('Time (seconds)')
+		self.Depth_ax2.set_ylabel('Depth (m)')
+
+		# ! Comment these out to let the graph just do it automatically
+		# # Set Y axis range to make graphs look better 
+		# self.Depth_ax2.set_ylim(bottom=self.PLOT_Y_MIN, top=self.PLOT_Y_MAX)
+
+		# # Set x axis intervals to make graph look better
+		# self.Depth_ax2.xaxis.set_major_locator(ticker.MultipleLocator(self.INTERVAL))
+
+
+		# Plot x_dot over time
+		depth, = self.Depth_ax2.plot(self.time_ar, self.depth_ar)
+		depth.set_label("Depth") # Label the line
+
+		# Show the legend for the various lines
+		self.Depth_ax2.legend(loc=2)
+
 
 if __name__ == "__main__":
 	# Set The font sizes for plots 
@@ -381,16 +497,29 @@ if __name__ == "__main__":
 	# IMU_ani = animation.FuncAnimation(imu_vis.imu_fig, imu_vis.plotIMUData, interval=1000)
 
 	# Visualizer object which will be used to keep track of the DVL state and plot it
-	dvl_vis = DVLVisualizer()
+	# dvl_vis = DVLVisualizer()
+
+	# # Subsriber for filtered DVL state
+	# rospy.Subscriber('/dvl_filtered_state', robot_state, dvl_vis.ekfDVLCallback)
+
+	# # Subscriber for unfiltered DVL state
+	# rospy.Subscriber('/dvl_unfiltered_state', robot_state, dvl_vis.unfiltDVLCallback)
+
+	# # Updating plot for DVL data
+	# DVL_ani = animation.FuncAnimation(dvl_vis.DVL_fig, dvl_vis.plotDVLData, interval=1000)
+
+	# Visualizer object which will be used to keep track of the DVL state and plot it
+	depth_vis = DepthVisualizer()
 
 	# Subsriber for filtered DVL state
-	rospy.Subscriber('/dvl_filtered_state', robot_state, dvl_vis.ekfDVLCallback)
+	rospy.Subscriber('/depth_filtered_state', robot_state, depth_vis.ekfDepthCallback)
 
 	# Subscriber for unfiltered DVL state
-	rospy.Subscriber('/dvl_unfiltered_state', robot_state, dvl_vis.unfiltDVLCallback)
+	rospy.Subscriber('/depth_unfiltered_state', robot_state, depth_vis.unfiltDepthCallback)
 
 	# Updating plot for DVL data
-	DVL_ani = animation.FuncAnimation(dvl_vis.DVL_fig, dvl_vis.plotDVLData, interval=1000)
+	depth_ani = animation.FuncAnimation(depth_vis.Depth_fig, depth_vis.plotDepthData, interval=1000)
+	
 	
 	# Display the plot
 	plt.show()

@@ -7,6 +7,6 @@
 	<node pkg="EKF" type="data_visualizer.py" name="visualizer" output="screen"></node>
 
 	<!-- Play the desire rosbag file -->
-	<node pkg="rosbag" type="play" name="player" output="screen" args="--clock $(find EKF)/bags/just_some_data.bag"/>
+	<node pkg="rosbag" type="play" name="player" output="screen" args="--clock $(find EKF)/bags/2018-10-26-15-43-56.bag"/>
 
 </launch>

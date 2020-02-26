@@ -75,6 +75,11 @@ private:
 	// DVL Unfiltered state publisher
 	ros::Publisher dvl_unfiltered_state_pub_ = n_.advertise<EKF::robot_state>("/dvl_unfiltered_state", 100);
 
+	// DVL Filtered state publisher
+	ros::Publisher depth_filtered_state_pub_ = n_.advertise<EKF::robot_state>("/depth_filtered_state", 100);
+
+	// DVL Unfiltered state publisher
+	ros::Publisher depth_unfiltered_state_pub_ = n_.advertise<EKF::robot_state>("/depth_unfiltered_state", 100);
 
 	// Variable to keep track of the previous time so we can find difference between timestamps
 	float previous_timestamp_;
@@ -243,6 +248,25 @@ public:
 		}
 		// ############## DVL SPECIFIC MATRICES ####################
 
+		// ############## DEPTH SPECIFIC MATRICES ####################
+		// Initialize the Depth sensor measurement mammping matrix H
+		H_depth_= MatrixXd(1, 12); // 1x12 because we only need to get the z value from the state
+
+		// Start the matrix as zeros
+		H_depth_.setZero();
+
+		// Put a 1 at the index that corresponds to the z state variables (AKA depth)
+		H_depth_(0, 2) = 1;
+
+		// Initialize the Depth sensor measurement noise matrix R
+		R_depth_ = MatrixXd(1, 1); //1x1 because we only need the noise value for the depth measurement
+
+		// Initialize with the value in the sensors documentation
+		// https://bluerobotics.com/store/sensors-sonars-cameras/sensors/bar30-sensor-r1/
+		R_depth_(0, 0) = 1; //2.04; // ! This seems very high
+		// ############## DEPTH SPECIFIC MATRICES ####################
+
+
 		// Initialize process noise covariance matrix Q
 		Q_ = MatrixXd(12, 12);
 
@@ -258,11 +282,17 @@ public:
 				// The main diagonal can be represented by when i is equal to j
 				// We use i < 6 because rows 0 through 5 will be for the position variables
 				// x, y, z, roll, pitch, yaw 
-				if(i == j and i < 3)
+				if(i == j and i < 2)
 				{
 					Q_(i, j) = 0;
 				}
 
+				// Process noise for z value. Value is acquired directly from depth sensor
+				if(i == j and i == 2)
+				{
+					// TODO: tune this
+					Q_(i, j) = .0001;
+				}
 
 				// IMU Process noise initialization for Roll, pitch, and yaw
 				else if(i == j and i < 6 and i >= 3)
@@ -323,6 +353,9 @@ public:
 			// Find yaw in radians
 			float yaw = atan2(accel_z, sqrt(accel_x*accel_x + accel_z*accel_z));
 
+			// ! Pick nice starting depth for graph
+			state_(2) = 2.55;
+
 			// Update roll, pitch, and yaw values
 			state_(3) = roll; 
 			state_(4) = pitch;
@@ -363,17 +396,41 @@ public:
 		// Check if the other messages are currently available to update the state
 
 		// Check if a depth message is available
-		// if(depth_msg_ != nullptr)
-		// {
-		// 	// If a depth message is ready then update the state using the message
-		// 	depthKalmanUpdate();
+		if(depth_msg_ != nullptr)
+		{
+			// TODO: Publish unfiltered depth here
+			// Create state message to hold depth data
+			EKF::robot_state uf_depth;
 
-		// 	// Free the memory being using by the depth msg object
-		// 	delete depth_msg_;
+			// Set time stamp for message
+			uf_depth.header.stamp = ros::Time::now();
 
-		// 	// Set the variable to nullptr so this doens't trigger again until we've received a new message
-		// 	depth_msg_ = nullptr;
-		// }
+			// TODO: Figure out if this should be negative
+			uf_depth.z = depth_msg_->depth;
+
+			depth_unfiltered_state_pub_.publish(uf_depth);
+
+			// If a depth message is ready then update the state using the message
+			depthKalmanUpdate();
+
+			// TODO: Publish filtered depth here
+			// Create state message to hold depth data
+			EKF::robot_state filt_depth;
+
+			// Set timestamp for header
+			filt_depth.header.stamp = ros::Time::now();
+
+			// TODO: Figure out if this should be negative
+			filt_depth.z = state_[2];
+
+			depth_filtered_state_pub_.publish(filt_depth);
+
+			// Free the memory being using by the depth msg object
+			delete depth_msg_;
+
+			// Set the variable to nullptr so this doens't trigger again until we've received a new message
+			depth_msg_ = nullptr;
+		}
 
 		// Check if a DVL message is available
 		if(DVL_msg_ != nullptr)
@@ -593,6 +650,28 @@ public:
 	{
 		// TODO: Add the Kalman Filter update stuff for the Depth sensor
 		// ! Message data to use is stored in depth_msg_
+		// Fill measurement vector z with roll, pitch, yaw, and derivatives values
+		VectorXd z_meas(1);
+
+		// Put values into the vector
+		// TODO: Figure out if this should be negative or positive
+		z_meas << depth_msg_->depth;
+
+		VectorXd z_pred = H_depth_ *state_;
+
+		VectorXd y = z_meas - z_pred; // Measurement error
+
+		MatrixXd S = H_depth_ * cov_ * (H_depth_.transpose()) + R_depth_;
+
+		MatrixXd K = cov_ * (H_depth_.transpose()) * (S.inverse()); // Kalman gain
+
+		// Get new state
+		state_ = state_ + K*y;
+
+		// Create identity matrix and use it to update state covariance matrix
+		MatrixXd I = MatrixXd::Identity(state_.size(), state_.size());
+
+		cov_ = (I - K*H_depth_)*cov_;
 	}
 
 	// Update the state based on the predicted state and the data from the DVL
@@ -601,9 +680,6 @@ public:
 		// TODO: Add the Kalman Filter update stuff for the DVL
 		// Fill measurement vector z with roll, pitch, yaw, and derivatives values
 		VectorXd z_meas(3);
-
-		// ! May need to add averaging or high pass filter here to filter out the massive jumps in
-		// velocity
 
 		// Temp variables to make code look cleaner
 		float x_vel = DVL_msg_->velocity.x;
@@ -648,9 +724,9 @@ public:
 	// Prints out the current state matrix and covariance state matrix for debugging purposes
 	void printState()
 	{
-		// cout << "State:" << endl;
-		// cout << state_ << endl;
-		// cout << "\n";
+		cout << "State:" << endl;
+		cout << state_ << endl;
+		cout << "\n";
 
 		cout << "Covariance:" << endl;
 		cout << cov_ << endl;
