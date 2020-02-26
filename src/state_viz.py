@@ -44,7 +44,7 @@ class rviz_visualizer(object):
 		# Get x, y, and z from state msg
 		odom.pose.pose.position.x = state_msg.x
 		odom.pose.pose.position.y = state_msg.y
-		odom.pose.pose.position.z = state_msg.z
+		odom.pose.pose.position.z = -state_msg.z
 
 		# Temp variables to hold roll, pitch, and yaw values to make calculations cleaner
 		roll = state_msg.roll

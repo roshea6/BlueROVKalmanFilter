@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<launch>
+	<!-- Extended kalman filter node -->
+	<node pkg="EKF" type="ekf" name="ekf_node"></node>
+
+	<!-- Data visualizer node -->
+	<node pkg="EKF" type="state_viz.py" name="visualizer" output="screen"></node>
+
+	<!-- Launch RVIZ -->
+	<node pkg="rviz" type="rviz" name="rviz" args="-d $(find EKF)/rviz/robot_state_visualization.rviz"/>
+
+	<!-- Play the desire rosbag file -->
+	<node pkg="rosbag" type="play" name="player" output="screen" args="--clock $(find EKF)/bags/2018-10-26-15-43-56.bag"/>
+
+</launch>

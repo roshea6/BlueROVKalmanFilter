@@ -5,6 +5,7 @@ Panels:
     Property Tree Widget:
       Expanded:
         - /Global Options1
+        - /Status1
         - /Odometry1
         - /Odometry1/Shape1
       Splitter Ratio: 0.5
@@ -76,8 +77,8 @@ Visualization Manager:
       Position Tolerance: 0.10000000149011612
       Shape:
         Alpha: 1
-        Axes Length: 0.6000000238418579
-        Axes Radius: 0.05999999865889549
+        Axes Length: 0.5
+        Axes Radius: 0.05000000074505806
         Color: 255; 25; 0
         Head Length: 0.30000001192092896
         Head Radius: 0.10000000149011612
@@ -115,25 +116,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 13.242269515991211
+      Distance: 10
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: -3.4144723415374756
-        Y: -0.507102906703949
-        Z: 0.0033928086049854755
+        X: 0
+        Y: 0
+        Z: 0
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.32979750633239746
+      Pitch: 1.3303974866867065
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 5.2885637283325195
+      Yaw: 0.010392004624009132
     Saved: ~
 Window Geometry:
   Displays:
