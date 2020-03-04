@@ -14,8 +14,12 @@
 // DVL messages
 #include <rti_dvl/DVL.h>
 
-// Custom robot state message
+// Custom robot state messages
 #include <EKF/robot_state.h>
+#include <EKF/robot_6_DOF_state.h>
+
+// Posestamped messages
+#include <geometry_msgs/PoseStamped.h>
 
 
 using std::cout;
@@ -80,6 +84,12 @@ private:
 
 	// DVL Unfiltered state publisher
 	ros::Publisher depth_unfiltered_state_pub_ = n_.advertise<EKF::robot_state>("/depth_unfiltered_state", 100);
+
+	// State publisher for the 6 DOF state (x, y, z, roll, pitch, yaw)
+	ros::Publisher DOF_6_state_pub_ = n_.advertise<EKF::robot_6_DOF_state>("/6_DOF_state", 100);
+
+	// Pose publisher for robot
+	ros::Publisher robot_pose_pub_ = n_.advertise<geometry_msgs::PoseStamped>("/robot_pose", 100);
 
 	// Variable to keep track of the previous time so we can find difference between timestamps
 	float previous_timestamp_;
@@ -475,53 +485,71 @@ public:
 		IMUKalmanUpdate(imu_msg); // Use the data from the IMU to update the state
 
 
-		// TODO: REMOVE THIS LATER IT'S JUST FOR TESTING VN STATE
-		// Put quaternion values from message into easier to use values
-		float q_x = imu_msg.orientation.x;
-		float q_y = imu_msg.orientation.y;
-		float q_z = imu_msg.orientation.z;
-		float q_w = imu_msg.orientation.w;
+		// // TODO: REMOVE THIS LATER IT'S JUST FOR TESTING VN STATE
+		// // Put quaternion values from message into easier to use values
+		// float q_x = imu_msg.orientation.x;
+		// float q_y = imu_msg.orientation.y;
+		// float q_z = imu_msg.orientation.z;
+		// float q_w = imu_msg.orientation.w;
 
-		// Convert into roll, pitch, and yaw
-		// These conversions are take directly from the VectorNav Quaternion math guide 
-		// https://www.vectornav.com/docs/default-source/documentation/vn-100-documentation/AN002.pdf?sfvrsn=19ee6b9_13
-		float imu_yaw = atan2(2*(q_x*q_y + q_w*q_z), q_w*q_w - q_z*q_z - q_y*q_y + q_x*q_x);
-		float imu_pitch = asin(-2*(q_x*q_z - q_y*q_w));
-		float imu_roll = atan2(2*(q_y*q_z + q_x*q_w), q_w*q_w + q_z*q_z - q_y*q_y - q_x*q_x);
+		// // Convert into roll, pitch, and yaw
+		// // These conversions are take directly from the VectorNav Quaternion math guide 
+		// // https://www.vectornav.com/docs/default-source/documentation/vn-100-documentation/AN002.pdf?sfvrsn=19ee6b9_13
+		// float imu_yaw = atan2(2*(q_x*q_y + q_w*q_z), q_w*q_w - q_z*q_z - q_y*q_y + q_x*q_x);
+		// float imu_pitch = asin(-2*(q_x*q_z - q_y*q_w));
+		// float imu_roll = atan2(2*(q_y*q_z + q_x*q_w), q_w*q_w + q_z*q_z - q_y*q_y - q_x*q_x);
 
-		// TODO: REMOVE THIS LATER IT'S JUST FOR TESTING
+		// // TODO: REMOVE THIS LATER IT'S JUST FOR TESTING
 
-		// Create a robot state message
-		EKF::robot_state state_msg;
+		// // Create a robot state message
+		// EKF::robot_state state_msg;
 
-		// Set the time for the state message
-		state_msg.header.stamp = imu_msg.header.stamp;
+		// // Set the time for the state message
+		// state_msg.header.stamp = imu_msg.header.stamp;
 
-		// Populate message with garbage data for now
-		state_msg.x = state_(0);
-		state_msg.y = state_(1);
-		state_msg.z = state_(2);
-		state_msg.roll = imu_roll;
-		state_msg.pitch = imu_pitch;
-		state_msg.yaw = imu_yaw;
-		state_msg.x_dot = state_(6);
-		state_msg.y_dot = state_(7);
-		state_msg.z_dot = state_(8);
-		state_msg.roll_dot = state_(9);
-		state_msg.pitch_dot = state_(10);
-		state_msg.yaw_dot = state_(11);
+		// // Populate message with state data
+		// state_msg.x = state_(0);
+		// state_msg.y = state_(1);
+		// state_msg.z = state_(2);
+		// state_msg.roll = imu_roll;
+		// state_msg.pitch = imu_pitch;
+		// state_msg.yaw = imu_yaw;
+		// state_msg.x_dot = state_(6);
+		// state_msg.y_dot = state_(7);
+		// state_msg.z_dot = state_(8);
+		// state_msg.roll_dot = state_(9);
+		// state_msg.pitch_dot = state_(10);
+		// state_msg.yaw_dot = state_(11);
 
-		// Publish message
-		vn_state_pub_.publish(state_msg);
+		// // Publish message
+		// vn_state_pub_.publish(state_msg);
 
+		// State message for filtered 6 DOF state
+		EKF::robot_6_DOF_state state_6_DOF;
+
+		// Set the timestamp for the message
+		state_6_DOF.header.stamp = ros::Time::now();
+
+		// Push the first 6 values of the state_ array into the array message
+		// These first 6 values correspond to x, y, z, roll, pitch, and yaw respectively
+		for(int i = 0; i < 6; i++)
+		{
+			state_6_DOF.state_data.data.push_back(state_[i]);
+		}
+		
+		DOF_6_state_pub_.publish(state_6_DOF);
+
+		// Publish the robot pose
+		publishRobotPose();
 
 		// Publish filtered state after latest update
 		// State message for filtered robot state
 		EKF::robot_state filtered_state;
 
 		// Set the timestamp for the message
-		filtered_state.header.stamp = ros::Time::now();  //imu_msg.header.stamp;
+		filtered_state.header.stamp = ros::Time::now();  //imu_msg.header.stamp
 
+		// Populate message with state data
 		filtered_state.x = state_[0];
 		filtered_state.y = state_[1];
 		filtered_state.z = state_[2];
@@ -698,6 +726,44 @@ public:
 		cov_ = (I - K*H_DVL_)*cov_;
 	}
 
+	// Calculates the robots current pose in x, y, z for translation and quaternion for orientation
+	// then publishes it
+	void publishRobotPose()
+	{
+		// Blank pose stamped message
+		geometry_msgs::PoseStamped robot_pose;
+
+		// Add the timestamp to the message
+		robot_pose.header.stamp = ros::Time::now();
+		
+		// ? Add parent frame to the header
+		robot_pose.header.frame_id = "map";
+
+		// Get the position of the robot from the state matrix
+		robot_pose.pose.position.x = state_[0];
+		robot_pose.pose.position.y = state_[1];
+		robot_pose.pose.position.z = -state_[2]; // Negative because positive depth = below the surface
+
+		// Calcualate the robot orientation in quaternion
+		// Temp variables to make calculations cleaner
+		float roll = state_[3];
+		float pitch = state_[4];
+		float yaw = state_[5];
+
+	 	// Convert to quaternion
+		float q_x = sin(roll/2) * cos(pitch/2) * cos(yaw/2) - cos(roll/2) * sin(pitch/2) * sin(yaw/2);
+		float q_y = cos(roll/2) * sin(pitch/2) * cos(yaw/2) + sin(roll/2) * cos(pitch/2) * sin(yaw/2);
+		float q_z = cos(roll/2) * cos(pitch/2) * sin(yaw/2) - sin(roll/2) * sin(pitch/2) * cos(yaw/2);
+		float q_w = cos(roll/2) * cos(pitch/2) * cos(yaw/2) + sin(roll/2) * sin(pitch/2) * sin(yaw/2);
+
+		// Populate the orientation part of the message
+		robot_pose.pose.orientation.x = q_x;
+		robot_pose.pose.orientation.y = q_y;
+		robot_pose.pose.orientation.z = q_z;
+		robot_pose.pose.orientation.w = q_w;
+		
+		robot_pose_pub_.publish(robot_pose);
+	}
 
 	// Prints out the current state matrix and covariance state matrix for debugging purposes
 	void printState()

@@ -7,7 +7,7 @@
 	<node pkg="EKF" type="state_viz.py" name="rviz_visualizer" output="screen"></node>
 
 	<!-- Data visualizer node -->
-	<node pkg="EKF" type="data_visualizer.py" name="data_visualizer" output="screen"></node>
+	<!-- <node pkg="EKF" type="data_visualizer.py" name="data_visualizer" output="screen"></node> -->
 
 	<!-- Launch RVIZ -->
 	<node pkg="rviz" type="rviz" name="rviz" args="-d $(find EKF)/rviz/robot_state_visualization.rviz"/>

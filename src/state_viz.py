@@ -67,20 +67,20 @@ class rviz_visualizer(object):
 
 	# Creates a path message to visualize the path through space the ROV took
 	# ! Path stops in RVIZ after a while for some reason
-	def path_callback(self, odom_msg):
+	def path_callback(self, pose_msg):
 		# Update header with newest stamp
-		self.path.header = odom_msg.header
+		self.path.header = pose_msg.header
 
 		# Create new pose stamped message to temporarily hold the pose
 		# The path is a series of posestamped messages
-		pose = PoseStamped()
+		# pose = PoseStamped()
 
-		# Get header and pose data from odom message
-		pose.header = odom_msg.header
-		pose.pose = odom_msg.pose.pose
+		# # Get header and pose data from odom message
+		# pose.header = odom_msg.header
+		# pose.pose = odom_msg.pose.pose
 
 		# Append pose to the path's list of poses
-		self.path.poses.append(pose)
+		self.path.poses.append(pose_msg)
 
 		# Publish the path
 		self.path_pub.publish(self.path)
@@ -98,6 +98,6 @@ if __name__ == "__main__":
 	rospy.Subscriber("/imu_filtered_state", robot_state, viz.imu_state_callback)
 
 	# Subsriber to our own odom topic to be used to create the path
-	rospy.Subscriber("/imu_odom", Odometry, viz.path_callback)
+	rospy.Subscriber("/robot_pose", PoseStamped, viz.path_callback)
 
 	rospy.spin()
