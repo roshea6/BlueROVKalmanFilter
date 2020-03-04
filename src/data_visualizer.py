@@ -382,8 +382,8 @@ class DepthVisualizer(object):
 		self.uf_start_time = rospy.Time.now()
 
 		# Max and min y values for the plot
-		self.PLOT_Y_MAX = 4
-		self.PLOT_Y_MIN = -2
+		self.PLOT_Y_MAX = 3.5
+		self.PLOT_Y_MIN = 2
 
 		# Graph interval
 		self.INTERVAL = 20
@@ -418,7 +418,7 @@ class DepthVisualizer(object):
 
 	# Plots the newest data from either the Depth or the EKF on the plot
 	def plotDepthData(self, data):
-		# UNFILTERED ROBOT Velocity
+		# UNFILTERED ROBOT Depth
 		# Clear the previous data
 		self.Depth_ax1.clear()
 
@@ -428,11 +428,11 @@ class DepthVisualizer(object):
 		self.Depth_ax1.set_ylabel('Depth (m)')
 		
 		# ! Comment these out to let the graph just do it automatically
-		# # Set Y axis range to make graphs look better 
-		# self.Depth_ax1.set_ylim(bottom=self.PLOT_Y_MIN, top=self.PLOT_Y_MAX)
+		# Set Y axis range to make graphs look better 
+		self.Depth_ax1.set_ylim(bottom=self.PLOT_Y_MIN, top=self.PLOT_Y_MAX)
 
-		# # Set x axis intervals to make graph look better
-		# self.Depth_ax1.xaxis.set_major_locator(ticker.MultipleLocator(self.INTERVAL))
+		# Set x axis intervals to make graph look better
+		self.Depth_ax1.xaxis.set_major_locator(ticker.MultipleLocator(self.INTERVAL))
 
 
 		# Plot depth over time
@@ -442,7 +442,7 @@ class DepthVisualizer(object):
 		# Show the legend for the various lines
 		self.Depth_ax1.legend(loc=2)
 
-		# FILTERED ROBOT Velocity
+		# FILTERED ROBOT Depth
 		# Clear the previous data
 		self.Depth_ax2.clear()
 
@@ -453,11 +453,11 @@ class DepthVisualizer(object):
 		self.Depth_ax2.set_ylabel('Depth (m)')
 
 		# ! Comment these out to let the graph just do it automatically
-		# # Set Y axis range to make graphs look better 
-		# self.Depth_ax2.set_ylim(bottom=self.PLOT_Y_MIN, top=self.PLOT_Y_MAX)
+		# Set Y axis range to make graphs look better 
+		self.Depth_ax2.set_ylim(bottom=self.PLOT_Y_MIN, top=self.PLOT_Y_MAX)
 
-		# # Set x axis intervals to make graph look better
-		# self.Depth_ax2.xaxis.set_major_locator(ticker.MultipleLocator(self.INTERVAL))
+		# Set x axis intervals to make graph look better
+		self.Depth_ax2.xaxis.set_major_locator(ticker.MultipleLocator(self.INTERVAL))
 
 
 		# Plot x_dot over time

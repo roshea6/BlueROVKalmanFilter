@@ -354,7 +354,7 @@ public:
 			float yaw = atan2(accel_z, sqrt(accel_x*accel_x + accel_z*accel_z));
 
 			// ! Pick nice starting depth for graph
-			state_(2) = 2.55;
+			state_(2) = 0;
 
 			// Update roll, pitch, and yaw values
 			state_(3) = roll; 
@@ -381,7 +381,7 @@ public:
 		// Update values of previous timestamp with value from latest message
 		previous_timestamp_ = imu_msg.header.stamp.toSec();
 
-		// TODO: Update the state transition matrix F
+		// Update the state transition matrix with the timestamp values
 		for(int i = 0; i < 6; i++)
 		{
 			// Update the off diagonal values for the derivatives of the position state variables
@@ -534,7 +534,7 @@ public:
 
 		imu_filtered_state_pub_.publish(filtered_state);
 
-		printState();
+		// printState();
 	}
 
 	// Callback function for the depth messages from the bar30 Depth sensor
@@ -569,7 +569,6 @@ public:
 	}
 
 	// Update the state based on the predicted state and the data from the IMU
-	// TODO: Figure out what part of the update step is causing the state and covariance matrix to all become NaN
 	void IMUKalmanUpdate(const sensor_msgs::Imu imu_msg)
 	{
 		// State message for robot state
@@ -630,13 +629,11 @@ public:
 	// Update the state based on the predicted state and the data from the Depth sensor
 	void depthKalmanUpdate()
 	{
-		// TODO: Add the Kalman Filter update stuff for the Depth sensor
 		// ! Message data to use is stored in depth_msg_
 		// Fill measurement vector z with roll, pitch, yaw, and derivatives values
 		VectorXd z_meas(1);
 
 		// Put values into the vector
-		// TODO: Figure out if this should be negative or positive
 		z_meas << depth_msg_->depth;
 
 		VectorXd z_pred = H_depth_ *state_;
@@ -659,7 +656,6 @@ public:
 	// Update the state based on the predicted state and the data from the DVL
 	void DVLKalmanUpdate()
 	{
-		// TODO: Add the Kalman Filter update stuff for the DVL
 		// Fill measurement vector z with roll, pitch, yaw, and derivatives values
 		VectorXd z_meas(3);
 
