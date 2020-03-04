@@ -287,7 +287,7 @@ public:
 					Q_(i, j) = 0;
 				}
 
-				// Process noise for z value. Value is acquired directly from depth sensor
+				// Process noise for z value acquired from depth sensor
 				if(i == j and i == 2)
 				{
 					// TODO: tune this
@@ -443,20 +443,6 @@ public:
 			float y_vel = DVL_msg_->velocity.y;
 			float z_vel = DVL_msg_->velocity.z;
 
-			// TODO: make these real filters
-			// if(abs(x_vel) > MAX_VEL)
-			// {
-			// 	x_vel = 0;
-			// }
-			// if(abs(y_vel) > MAX_VEL)
-			// {
-			// 	y_vel = 0;
-			// }
-			// if(abs(z_vel) > MAX_VEL)
-			// {
-			// 	z_vel = 0;
-			// }
-
 			uf_dvl.header.stamp = ros::Time::now(); //DVL_msg_->header.stamp;
 			uf_dvl.x_dot = x_vel;
 			uf_dvl.y_dot = y_vel;
@@ -476,10 +462,6 @@ public:
 			filt_dvl.z_dot = state_(8);
 
 			dvl_filtered_state_pub_.publish(filt_dvl);
-
-			// cout << "DVL Message" << endl;
-			// cout << *DVL_msg_ << endl;
-			// cout << "\n" <<endl;
 
 			// Free the memory being using by the DVL msg object
 			delete DVL_msg_;

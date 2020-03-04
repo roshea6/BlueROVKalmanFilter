@@ -44,7 +44,7 @@ class rviz_visualizer(object):
 		# Get x, y, and z from state msg
 		odom.pose.pose.position.x = state_msg.x
 		odom.pose.pose.position.y = state_msg.y
-		odom.pose.pose.position.z = -state_msg.z
+		odom.pose.pose.position.z = -state_msg.z # Negative because positive depth = distance below the surface
 
 		# Temp variables to hold roll, pitch, and yaw values to make calculations cleaner
 		roll = state_msg.roll
@@ -65,6 +65,8 @@ class rviz_visualizer(object):
 
 		self.odom_pub.publish(odom)
 
+	# Creates a path message to visualize the path through space the ROV took
+	# ! Path stops in RVIZ after a while for some reason
 	def path_callback(self, odom_msg):
 		# Update header with newest stamp
 		self.path.header = odom_msg.header

@@ -135,11 +135,11 @@ class IMUVisualizer(object):
 		self.imu_ax1.set_ylabel('Euler Angles(rads)', fontsize=30)
 
 		# ! Comment these out to let the graph just do it automatically
-		# Set Y axis range for graph to make it look better
-		self.imu_ax1.set_ylim(bottom=self.PLOT_Y_MIN, top=self.PLOT_Y_MAX) 
+		# # Set Y axis range for graph to make it look better
+		# self.imu_ax1.set_ylim(bottom=self.PLOT_Y_MIN, top=self.PLOT_Y_MAX) 
 
-		# Set x axis intervals to make graph look better
-		self.imu_ax1.xaxis.set_major_locator(ticker.MultipleLocator(self.INTERVAL))
+		# # Set x axis intervals to make graph look better
+		# self.imu_ax1.xaxis.set_major_locator(ticker.MultipleLocator(self.INTERVAL))
 
 		# Plot roll over time
 		roll, = self.imu_ax1.plot(self.uf_time_ar, self.uf_roll_ar)
@@ -166,12 +166,12 @@ class IMUVisualizer(object):
 		self.imu_ax2.set_xlabel('Time (seconds)')
 		self.imu_ax2.set_ylabel('Euler Angles (rads)', fontsize=30)
 
-		# ! Comment these out to let the graph just do it automatically
-		# Set Y axis range to make graphs look better 
-		self.imu_ax2.set_ylim(bottom=self.PLOT_Y_MIN, top=self.PLOT_Y_MAX)
+		# # ! Comment these out to let the graph just do it automatically
+		# # Set Y axis range to make graphs look better 
+		# self.imu_ax2.set_ylim(bottom=self.PLOT_Y_MIN, top=self.PLOT_Y_MAX)
 
-		# Set x axis intervals to make graph look better
-		self.imu_ax2.xaxis.set_major_locator(ticker.MultipleLocator(self.INTERVAL))
+		# # Set x axis intervals to make graph look better
+		# self.imu_ax2.xaxis.set_major_locator(ticker.MultipleLocator(self.INTERVAL))
 
 		# Plot roll over time
 		roll, = self.imu_ax2.plot(self.time_ar, self.roll_ar)
@@ -476,37 +476,37 @@ if __name__ == "__main__":
 	# Initialize the ROS node
 	rospy.init_node("ekf_visualizer", anonymous=True)
 
-	# # Visualizer object which will be used to keep track of the IMU state and plot it
-	# imu_vis = IMUVisualizer()
+	# Visualizer object which will be used to keep track of the IMU state and plot it
+	imu_vis = IMUVisualizer()
 
-	# # Subscriber for filtered IMU state 
-	# rospy.Subscriber('/imu_filtered_state', robot_state, imu_vis.ekfIMUStateCallback)
+	# Subscriber for filtered IMU state 
+	rospy.Subscriber('/imu_filtered_state', robot_state, imu_vis.ekfIMUStateCallback)
 
-	# # Subsriber for the unfiltered IMU state
-	# rospy.Subscriber('/imu_unfiltered_state', robot_state, imu_vis.unfiltIMUStateCallback)
+	# Subsriber for the unfiltered IMU state
+	rospy.Subscriber('/imu_unfiltered_state', robot_state, imu_vis.unfiltIMUStateCallback)
 
-	# # Subscriber for robot state from pure IMU data
-	# rospy.Subscriber('/vn_state', robot_state, imu_vis.vnStateCallback)
+	# Subscriber for robot state from pure IMU data
+	rospy.Subscriber('/vn_state', robot_state, imu_vis.vnStateCallback)
 
-	# # Set the figure to update every second using the plotData function in the Visualizer class
-	# # The plotData function will clear the previous data and replot with any new data received
-	# # from the state callback functions
-	# # * interval must not update the graph faster than the rate at which data is produced or else 
-	# # * the array of time data will become larger than the array of sensor data and break the graph
-	# # TODO: Find a workaround for this. Possibly only add time to time array when it won't become larger than sensor data array 
-	# IMU_ani = animation.FuncAnimation(imu_vis.imu_fig, imu_vis.plotIMUData, interval=1000)
+	# Set the figure to update every second using the plotData function in the Visualizer class
+	# The plotData function will clear the previous data and replot with any new data received
+	# from the state callback functions
+	# * interval must not update the graph faster than the rate at which data is produced or else 
+	# * the array of time data will become larger than the array of sensor data and break the graph
+	# TODO: Find a workaround for this. Possibly only add time to time array when it won't become larger than sensor data array 
+	IMU_ani = animation.FuncAnimation(imu_vis.imu_fig, imu_vis.plotIMUData, interval=1000)
 
 	# Visualizer object which will be used to keep track of the DVL state and plot it
-	# dvl_vis = DVLVisualizer()
+	dvl_vis = DVLVisualizer()
 
-	# # Subsriber for filtered DVL state
-	# rospy.Subscriber('/dvl_filtered_state', robot_state, dvl_vis.ekfDVLCallback)
+	# Subsriber for filtered DVL state
+	rospy.Subscriber('/dvl_filtered_state', robot_state, dvl_vis.ekfDVLCallback)
 
-	# # Subscriber for unfiltered DVL state
-	# rospy.Subscriber('/dvl_unfiltered_state', robot_state, dvl_vis.unfiltDVLCallback)
+	# Subscriber for unfiltered DVL state
+	rospy.Subscriber('/dvl_unfiltered_state', robot_state, dvl_vis.unfiltDVLCallback)
 
-	# # Updating plot for DVL data
-	# DVL_ani = animation.FuncAnimation(dvl_vis.DVL_fig, dvl_vis.plotDVLData, interval=1000)
+	# Updating plot for DVL data
+	DVL_ani = animation.FuncAnimation(dvl_vis.DVL_fig, dvl_vis.plotDVLData, interval=1000)
 
 	# Visualizer object which will be used to keep track of the DVL state and plot it
 	depth_vis = DepthVisualizer()
