@@ -7,6 +7,7 @@ from matplotlib.gridspec import GridSpec
 import time
 import rospy
 import cv2
+from cv_bridge import CvBridge
 import numpy as np
 
 # IMU messages
@@ -20,6 +21,9 @@ from rti_dvl.msg import DVL
 
 # Robot state message
 from EKF.msg import robot_state
+
+# Images for Sonar data
+from sensor_msgs.msg import Image
 
 # Removes axes labels for the specified subplots
 def format_axes(fig):
@@ -51,9 +55,6 @@ class BlueROVVisualizer(object):
 		self.depth_plot.set_title("Depth")
 		self.orientation_plot.set_title("Orientation")
 		format_axes(self.fig)
-
-		# self.img = cv2.imread('../images/rviz_bag_vis.png')
-		# self.M750_plot.imshow(self.img)
 
 		# Variables for holding state data to plot
 		# Orientation data
@@ -162,6 +163,33 @@ class BlueROVVisualizer(object):
 		# Show the legend for the various lines
 		self.depth_plot.legend()
 
+	# Callbakc function to update the M750 with the latest data from the ROS topic
+	def M750Callback(self, img):
+		# Bridge conversion object to convert between ROS images and opencv images
+		bridge = CvBridge()
+
+		# Convert to and opencv message
+		cv_img = bridge.imgmsg_to_cv2(img)
+
+		# Display the image
+		self.M750_plot.imshow(cv_img)
+		# cv2.imshow('M750', cv_img)
+		# cv2.waitKey(10)
+
+	# Callback function to update the M1200 with the latest data from the ROS topic
+	def M1200Callback(self, img):
+		# Bridge conversion object to convert between ROS images and opencv images
+		bridge = CvBridge()
+
+		# Convert to and opencv message
+		cv_img = bridge.imgmsg_to_cv2(img)
+
+		# Display the image
+		self.M1200_plot.imshow(cv_img)
+		# cv2.imshow('M1200', cv_img)
+		# cv2.waitKey(10)
+
+
 
 if __name__ == "__main__":
 	# Set The font sizes for plots 
@@ -177,9 +205,13 @@ if __name__ == "__main__":
 	rospy.Subscriber('imu_filtered_state', robot_state, rov_vis.robotStateCallback)
 
 	# Setup the animated plots with their respective plotting functions
-	orientation_ani = animation.FuncAnimation(rov_vis.fig, rov_vis.plotOrientationData, interval=1000)
-	velocity_ani = animation.FuncAnimation(rov_vis.fig, rov_vis.plotVelData, interval=1000)
-	depth_ani = animation.FuncAnimation(rov_vis.fig, rov_vis.plotDepthData, interval=1000)
+	orientation_ani = animation.FuncAnimation(rov_vis.fig, rov_vis.plotOrientationData, interval=500)
+	velocity_ani = animation.FuncAnimation(rov_vis.fig, rov_vis.plotVelData, interval=500)
+	depth_ani = animation.FuncAnimation(rov_vis.fig, rov_vis.plotDepthData, interval=500)
+
+	# Subscribers to the sonar images
+	rospy.Subscriber('sonar_oculus_node/M750d/image', Image, rov_vis.M750Callback)
+	# rospy.Subscriber('sonar_oculus_node/M1200d/image', Image, rov_vis.M1200Callback)
 
 	plt.show()
 

@@ -7,6 +7,6 @@
 	<node pkg="EKF" type="blueROV_state_ui.py" name="visualizer" output="screen"></node>
 
 	<!-- Play the desire rosbag file -->
-	<node pkg="rosbag" type="play" name="player" output="screen" args="--clock $(find EKF)/bags/2018-10-26-15-43-56.bag"/>
+	<node pkg="rosbag" type="play" name="player" output="screen" args="--clock $(find EKF)/bags/2020-02-17-11-34-35.bag"/>
 
 </launch>
