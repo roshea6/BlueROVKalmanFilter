@@ -363,7 +363,7 @@ public:
 			// Find yaw in radians
 			float yaw = atan2(accel_z, sqrt(accel_x*accel_x + accel_z*accel_z));
 
-			// ! Pick nice starting depth for graph
+			// Set depth to 0
 			state_(2) = 0;
 
 			// Update roll, pitch, and yaw values
@@ -372,10 +372,9 @@ public:
 			state_(5) = yaw;
 
 			// Update derivatives of orientation variables
-			// ! Change these back to positive posibbly
 			state_(9) = imu_msg.angular_velocity.x; // roll_dot
 			state_(10) = imu_msg.angular_velocity.y; // pitch_dot
-			state_(11) = imu_msg.angular_velocity.z; // yaw_dot // ! Change this back from 0
+			state_(11) = imu_msg.angular_velocity.z; // yaw_dot
 
 			// Mark the state as initilized
 			is_initialized_ = true;
@@ -547,7 +546,7 @@ public:
 		EKF::robot_state filtered_state;
 
 		// Set the timestamp for the message
-		filtered_state.header.stamp = ros::Time::now();  //imu_msg.header.stamp
+		filtered_state.header.stamp = ros::Time::now(); 
 
 		// Populate message with state data
 		filtered_state.x = state_[0];
