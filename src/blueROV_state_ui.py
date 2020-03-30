@@ -171,6 +171,24 @@ class BlueROVVisualizer(object):
 		# Convert to and opencv message
 		cv_img = bridge.imgmsg_to_cv2(img)
 
+		# font 
+		font = cv2.FONT_HERSHEY_SIMPLEX 
+		
+		# origin of text
+		org = (30, 30) 
+		
+		# fontScale 
+		fontScale = 1
+		
+		# Green in BGR 
+		color = (0, 255, 0) 
+		
+		# Line thickness of 2 px 
+		thickness = 2
+
+		# Draw depth on image to 3 decimal places
+		cv_img = cv2.putText(cv_img, "Depth: " + str('%.3f'%self.depth_ar[-1]), org, font, fontScale, color, thickness, cv2.LINE_AA)
+
 		# Display the image
 		self.M750_plot.imshow(cv_img)
 		# cv2.imshow('M750', cv_img)
@@ -185,9 +203,9 @@ class BlueROVVisualizer(object):
 		cv_img = bridge.imgmsg_to_cv2(img)
 
 		# Display the image
-		self.M1200_plot.imshow(cv_img)
-		# cv2.imshow('M1200', cv_img)
-		# cv2.waitKey(10)
+		# self.M1200_plot.imshow(cv_img)
+		cv2.imshow('M1200', cv_img)
+		cv2.waitKey(10)
 
 
 
@@ -211,7 +229,7 @@ if __name__ == "__main__":
 
 	# Subscribers to the sonar images
 	rospy.Subscriber('sonar_oculus_node/M750d/image', Image, rov_vis.M750Callback)
-	# rospy.Subscriber('sonar_oculus_node/M1200d/image', Image, rov_vis.M1200Callback)
+	rospy.Subscriber('sonar_oculus_node/M1200d/image', Image, rov_vis.M1200Callback)
 
 	plt.show()
 
