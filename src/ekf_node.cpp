@@ -322,17 +322,10 @@ public:
 				{
 					Q_(i, j) = .00001;
 				}
-				
-				// Fill the rest with 0's to start off
-				// else
-				// {
-				// 	Q_(i, j) = 0;
-				// }
+
 			}
 		}
 
-		cout << "Process covariance" << endl;
-		cout << Q_ << endl;
 	}
 
 	// Destuctor
@@ -381,16 +374,7 @@ public:
 			return;
 		}
 
-		// Calculate dt possibly
-		// TODO: Figure out why IMU messages in rosbag don't have timestamps
-		// TODO: dt for Kalman should be fixed
-		// ? Try making dt a constant of 1/200 to match rate for IMU publishing frequency
-		float dt = (imu_msg.header.stamp.toSec() - previous_timestamp_);
-		
-		// Update values of previous timestamp with value from latest message
-		previous_timestamp_ = imu_msg.header.stamp.toSec();
-
-		// Update the state transition matrix with the timestamp values
+		// Update the state transition matrix with the delta time values
 		for(int i = 0; i < 6; i++)
 		{
 			// Update the off diagonal values for the derivatives of the position state variables
@@ -775,9 +759,9 @@ public:
 		cout << cov_ << endl;
 		cout << "\n";
 
-		// cout << "State Transition" << endl;
-		// cout << F_ << endl;
-		// cout << "\n";
+		cout << "State Transition" << endl;
+		cout << F_ << endl;
+		cout << "\n";
 
 		// cout << "DVL H Matrix" << endl;
 		// cout << H_DVL_ << endl;
@@ -787,9 +771,9 @@ public:
 		// cout << R_DVL_ << endl;
 		// cout << "\n";
 
-		// cout << "Q Matrix" << endl;
-		// cout << Q_ << endl;
-		// cout << "\n";
+		cout << "Q Matrix" << endl;
+		cout << Q_ << endl;
+		cout << "\n";
 	}
 
 };

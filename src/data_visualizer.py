@@ -429,10 +429,10 @@ class DepthVisualizer(object):
 		
 		# ! Comment these out to let the graph just do it automatically
 		# Set Y axis range to make graphs look better 
-		self.Depth_ax1.set_ylim(bottom=self.PLOT_Y_MIN, top=self.PLOT_Y_MAX)
+		# self.Depth_ax1.set_ylim(bottom=self.PLOT_Y_MIN, top=self.PLOT_Y_MAX)
 
-		# Set x axis intervals to make graph look better
-		self.Depth_ax1.xaxis.set_major_locator(ticker.MultipleLocator(self.INTERVAL))
+		# # Set x axis intervals to make graph look better
+		# self.Depth_ax1.xaxis.set_major_locator(ticker.MultipleLocator(self.INTERVAL))
 
 
 		# Plot depth over time
@@ -454,10 +454,10 @@ class DepthVisualizer(object):
 
 		# ! Comment these out to let the graph just do it automatically
 		# Set Y axis range to make graphs look better 
-		self.Depth_ax2.set_ylim(bottom=self.PLOT_Y_MIN, top=self.PLOT_Y_MAX)
+		# self.Depth_ax2.set_ylim(bottom=self.PLOT_Y_MIN, top=self.PLOT_Y_MAX)
 
-		# Set x axis intervals to make graph look better
-		self.Depth_ax2.xaxis.set_major_locator(ticker.MultipleLocator(self.INTERVAL))
+		# # Set x axis intervals to make graph look better
+		# self.Depth_ax2.xaxis.set_major_locator(ticker.MultipleLocator(self.INTERVAL))
 
 
 		# Plot x_dot over time

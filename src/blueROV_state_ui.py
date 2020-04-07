@@ -8,7 +8,6 @@ import time
 import rospy
 import cv2
 from cv_bridge import CvBridge
-import numpy as np
 
 # IMU messages
 from sensor_msgs.msg import Imu
@@ -175,7 +174,7 @@ class BlueROVVisualizer(object):
 
 		# Check to make sure an M1200 image has been received
 		# TODO: This throws an error usually on the first first call of the function but it doesn't cause a problem
-		if self.M1200_img.any() != None:
+		if self.M1200_img is not None:
 			# Reshape the M750 image to match the shape of the M1200
 			cv_img = cv2.resize(cv_img, (self.M1200_img.shape[1], self.M1200_img.shape[0]))
 
