@@ -28,9 +28,7 @@ from sensor_msgs.msg import Image
 # Removes axes labels for the specified subplots
 def format_axes(fig):
     for i, ax in enumerate(fig.axes):
-		if i != 4 and i < 2:
-			ax.tick_params(labelbottom=False, labelleft=False)
-		elif i != 4:
+		if i < 2:
 			ax.tick_params(labelbottom=False)
 
 # Class for full single figure display of all relevant BlueROV topics
@@ -40,17 +38,13 @@ class BlueROVVisualizer(object):
 
 		# Setup the grid and assign each plot the proper space
 		# Grid was setup as a 6 rows by 2 columns to give proper sizes to the plots
-		self.gs = GridSpec(6, 2)
-		self.M750_plot = self.fig.add_subplot(self.gs[0:3, 0])
-		self.M1200_plot = self.fig.add_subplot(self.gs[3:6, 0])
-		self.velocity_plot = self.fig.add_subplot(self.gs[0:2, 1])
-		self.depth_plot = self.fig.add_subplot(self.gs[2:4, 1])
-		self.orientation_plot = self.fig.add_subplot(self.gs[4:6, 1])
+		self.gs = GridSpec(3, 1)
+		self.velocity_plot = self.fig.add_subplot(self.gs[0, 0])
+		self.depth_plot = self.fig.add_subplot(self.gs[1, 0])
+		self.orientation_plot = self.fig.add_subplot(self.gs[2, 0])
 
 		# Add titles and proper spacing to each plot
-		self.fig.subplots_adjust(hspace=.9)
-		self.M750_plot.set_title("M750")
-		self.M1200_plot.set_title("M1200")
+		self.fig.subplots_adjust(hspace=.5)
 		self.velocity_plot.set_title("Velocity")
 		self.depth_plot.set_title("Depth")
 		self.orientation_plot.set_title("Orientation")
@@ -75,6 +69,13 @@ class BlueROVVisualizer(object):
 
 		# Variables for setting up time to plot against
 		self.start_time = rospy.Time.now()
+
+		# Variables to store the latest sonar images
+		self.M750_img = None
+		self.M1200_img = None
+
+		# Variable to store altitude reading from DVL
+		self.robot_alt = None
 
 	# Recieves messages from the EKF node about the latest state
 	def robotStateCallback(self, state_msg):
@@ -169,6 +170,46 @@ class BlueROVVisualizer(object):
 		bridge = CvBridge()
 
 		# Convert to and opencv message
+		# Need to use copy so resize is allowed to manipulate the image
+		cv_img = bridge.imgmsg_to_cv2(img).copy()
+
+		# Check to make sure an M1200 image has been received
+		# TODO: This throws an error usually on the first first call of the function but it doesn't cause a problem
+		if self.M1200_img.any() != None:
+			# Reshape the M750 image to match the shape of the M1200
+			cv_img = cv2.resize(cv_img, (self.M1200_img.shape[1], self.M1200_img.shape[0]))
+
+			# Concatenate the two sonar images vertically
+			combined_img = cv2.vconcat([cv_img, self.M1200_img])
+
+			# font 
+			font = cv2.FONT_HERSHEY_SIMPLEX 
+			
+			# origin of text
+			org = (30, 30) 
+			
+			# fontScale 
+			fontScale = 1
+			
+			# Green in BGR 
+			color = (0, 255, 0) 
+			
+			# Line thickness of 2 px 
+			thickness = 2
+
+			# Draw altitude on tje image to 3 decimal places
+			combined_img = cv2.putText(combined_img, "Alt: " + str('%.3f'%self.robot_alt), org, font, fontScale, color, thickness, cv2.LINE_AA)
+
+			# Display the image
+			cv2.imshow('Top: M750. Bottom: M1200', combined_img)
+			cv2.waitKey(1)
+
+	# Callback function to update the M1200 with the latest data from the ROS topic
+	def M1200Callback(self, img):
+		# Bridge conversion object to convert between ROS images and opencv images
+		bridge = CvBridge()
+
+		# Convert to and opencv message
 		cv_img = bridge.imgmsg_to_cv2(img)
 
 		# font 
@@ -186,26 +227,17 @@ class BlueROVVisualizer(object):
 		# Line thickness of 2 px 
 		thickness = 2
 
-		# Draw depth on image to 3 decimal places
+		# Draw depth on the image to 3 decimal places
 		cv_img = cv2.putText(cv_img, "Depth: " + str('%.3f'%self.depth_ar[-1]), org, font, fontScale, color, thickness, cv2.LINE_AA)
 
-		# Display the image
-		self.M750_plot.imshow(cv_img)
-		# cv2.imshow('M750', cv_img)
-		# cv2.waitKey(10)
+		# Save Image
+		self.M1200_img = cv_img
 
-	# Callback function to update the M1200 with the latest data from the ROS topic
-	def M1200Callback(self, img):
-		# Bridge conversion object to convert between ROS images and opencv images
-		bridge = CvBridge()
 
-		# Convert to and opencv message
-		cv_img = bridge.imgmsg_to_cv2(img)
-
-		# Display the image
-		# self.M1200_plot.imshow(cv_img)
-		cv2.imshow('M1200', cv_img)
-		cv2.waitKey(10)
+	# Callback function for the DVL data that updates the current altitude data
+	def altitude_callback(self, dvl_msg):
+		# Update altitude value
+		self.robot_alt = dvl_msg.altitude
 
 
 
@@ -217,6 +249,7 @@ if __name__ == "__main__":
 	# Initialize the ROS node
 	rospy.init_node("ekf_visualizer", anonymous=True)
 
+	# Create the visualizer object
 	rov_vis = BlueROVVisualizer()
 
 	# Subscriber to robot state
@@ -230,6 +263,9 @@ if __name__ == "__main__":
 	# Subscribers to the sonar images
 	rospy.Subscriber('sonar_oculus_node/M750d/image', Image, rov_vis.M750Callback)
 	rospy.Subscriber('sonar_oculus_node/M1200d/image', Image, rov_vis.M1200Callback)
+
+	# Subscriber to DVL topic
+	rospy.Subscriber('rti/body_velocity/raw', DVL, rov_vis.altitude_callback)
 
 	plt.show()
 
