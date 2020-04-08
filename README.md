@@ -1,6 +1,6 @@
-# BueROV Extended Kalman Filter (EKF)
+# BueROV Kalman Filter (KF)
 
-This repository contains code for a 6-DOF state estimation framework for the Robust Field Autonomy Lab's (RFAL) BlueROV2 platform. The state estimation is implemented as an Extended Kalman filter that fuses sensor readings from the inertial measurement unit (IMU), doppler velocity logger (DVL), and pressure sensor. By combining these three sensors we are able to produce an accurate estimation of the ROV's 6-DOF state. This repostiory also contains various visualization tools that help show both the ROV's current state as well as its state over time. 
+This repository contains code for a 6-DOF state estimation framework for the Robust Field Autonomy Lab's (RFAL) BlueROV2 platform. The state estimation is implemented as a Kalman filter that fuses sensor readings from the inertial measurement unit (IMU), doppler velocity logger (DVL), and pressure sensor. By combining these three sensors we are able to produce an accurate estimation of the ROV's 6-DOF state. This repostiory also contains various visualization tools that help show both the ROV's current state as well as its state over time. 
 
 <p align='center'>
     <img src="/media/orientation_comparison.gif" alt="orientation_example" width="800"/>
@@ -78,8 +78,8 @@ Measurement Noise Matrices: Matrices of various sizes with one dedicated to each
 
 ## Running the Code
 
-### Extended Kalman Filter
-To run just the Extended Kalman Filter for the ROV use the following command:
+### Kalman Filter
+To run just the Kalman Filter for the ROV use the following command:
 ```
 rosrun EKF ekf
 ```
@@ -88,26 +88,26 @@ This will publish 3 topics of interest
 - /robot_pose: A PoseStamped message containing current robot pose with an associated timestamp
 - /imu_filtered_state (MOST LIKELY GOING TO CHANGE): A custom message with the 12 values of the robot state mentioned earlier. Primarily used for debugging and tuning purposes
 
-### Extemded Kalman Filter + Unfiltered vs Filtered State Visualizer (Might get removed)
+### Kalman Filter + Unfiltered vs Filtered State Visualizer (Might get removed)
 
-To run the Extended Kalman Filter + state visualization node use the following command:
+To run the Kalman Filter + state visualization node use the following command:
 ```
 roslaunch EKF ekf_visualizer.launch
 ```
 
 This will play a bag file and show the unfiltered vs filtered output of the various sensors. Use it to tune values. Need to have a bag file to play!!
 
-### Extended Kalman Filter + BlueROV UI
-To run the Extended Kalman filter with the new UI for the BlueROV use the following command:
+### Kalman Filter + BlueROV UI
+To run the Kalman filter with the new UI for the BlueROV use the following command:
 ```
 roslaunch EKF blue_rov_ekf_ui.launch
 ```
 
-In addition to the EKF this will launch and opencv window with both the M750 and M1200 Sonar images stitched together as well as a matplotlib window with graphed data of robot state over time.
+In addition to the KF this will launch and opencv window with both the M750 and M1200 Sonar images stitched together as well as a matplotlib window with graphed data of robot state over time.
 
 
-### Extended Kalman Filter + RVIZ Visualization
-To run the Extended Kalman filter with the RVIZ visualization use the following command:
+### Kalman Filter + RVIZ Visualization
+To run the Kalman filter with the RVIZ visualization use the following command:
 ```
 roslaunch EKF rviz_state_viz.launch
 ```

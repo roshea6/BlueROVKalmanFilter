@@ -145,7 +145,7 @@ class BlueROVVisualizer(object):
 		# Show the legend for the various lines
 		self.velocity_plot.legend()
 
-	# Plots the newest data from either the Depth or the EKF on the plot
+	# Plots the newest depth data from the robot state
 	def plotDepthData(self, data):
 		# FILTERED ROBOT Depth
 		# Clear the previous data
@@ -246,7 +246,7 @@ if __name__ == "__main__":
 						'legend.fontsize': 10})
 
 	# Initialize the ROS node
-	rospy.init_node("ekf_visualizer", anonymous=True)
+	rospy.init_node("kf_visualizer", anonymous=True)
 
 	# Create the visualizer object
 	rov_vis = BlueROVVisualizer()
