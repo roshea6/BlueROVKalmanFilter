@@ -74,7 +74,9 @@ class BlueROVVisualizer(object):
 		self.M1200_img = None
 
 		# Variable to store altitude reading from DVL
-		self.robot_alt = None
+		self.robot_alt = 0
+
+		self.raw_robot_depth = 0
 
 	# Recieves messages from the EKF node about the latest state
 	def robotStateCallback(self, state_msg):
@@ -227,7 +229,7 @@ class BlueROVVisualizer(object):
 		thickness = 2
 
 		# Draw depth on the image to 3 decimal places
-		cv_img = cv2.putText(cv_img, "Depth: " + str('%.3f'%self.depth_ar[-1]), org, font, fontScale, color, thickness, cv2.LINE_AA)
+		cv_img = cv2.putText(cv_img, "Depth: " + str('%.3f'%self.raw_robot_depth), org, font, fontScale, color, thickness, cv2.LINE_AA)
 
 		# Save Image
 		self.M1200_img = cv_img
@@ -237,6 +239,12 @@ class BlueROVVisualizer(object):
 	def altitude_callback(self, dvl_msg):
 		# Update altitude value
 		self.robot_alt = dvl_msg.altitude
+
+	# Callback function to get get raw depth values from the pressure sensor
+	def raw_depth_callback(self, depth_msg):
+		# Update depth value
+		self.raw_robot_depth = depth_msg.depth
+
 
 
 
@@ -265,6 +273,9 @@ if __name__ == "__main__":
 
 	# Subscriber to DVL topic
 	rospy.Subscriber('rti/body_velocity/raw', DVL, rov_vis.altitude_callback)
+
+	# Subscriber to pressure sensor topic
+	rospy.Subscriber('/bar30/depth/raw', Depth, rov_vis.raw_depth_callback)
 
 	plt.show()
 
