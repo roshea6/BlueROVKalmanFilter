@@ -2,7 +2,9 @@
 
 This repository contains code for a 6-DOF state estimation framework for the Robust Field Autonomy Lab's (RFAL) BlueROV2 platform. The state estimation is implemented as an Extended Kalman filter that fuses sensor readings from the inertial measurement unit (IMU), doppler velocity logger (DVL), and pressure sensor. By combining these three sensors we are able to produce an accurate estimation of the ROV's 6-DOF state. This repostiory also contains various visualization tools that help show both the ROV's current state as well as its state over time. 
 
-Maybe throw a gif or video of the unfiltered vs filtered output here?
+<p align='center'>
+    <img src="/media/orientation_comparison.gif" alt="orientation_example" width="800"/>
+</p>
 
 
 ## Dependencies
