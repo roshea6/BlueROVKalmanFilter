@@ -17,7 +17,7 @@ from nav_msgs.msg import Path
 from geometry_msgs.msg import PoseStamped
 
 # Robot state message
-from EKF.msg import robot_state
+from BlueROVKalmanFilter.msg import robot_state
 
 #  Turns robot state messages into messages that RVIZ can more easily display
 class rviz_visualizer(object):

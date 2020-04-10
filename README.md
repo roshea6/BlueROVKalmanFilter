@@ -31,7 +31,7 @@ You can use the following commands to download and compile the package.
 
 ```
 cd ~/catkin_ws/src
-git clone https://github.com/roshea6/EKF.git
+git clone https://github.com/roshea6/BlueROVKalmanFilter.git
 cd ..
 catkin_make
 ```
@@ -92,7 +92,7 @@ This will publish 3 topics of interest
 
 To run the Kalman Filter + state visualization node use the following command:
 ```
-roslaunch EKF ekf_visualizer.launch
+roslaunch BlueROVKalmanFilter kf_visualizer.launch
 ```
 
 This will play a bag file and show the unfiltered vs filtered output of the various sensors. Use it to tune values. Need to have a bag file to play!!
@@ -100,7 +100,7 @@ This will play a bag file and show the unfiltered vs filtered output of the vari
 ### Kalman Filter + BlueROV UI
 To run the Kalman filter with the new UI for the BlueROV use the following command:
 ```
-roslaunch EKF blue_rov_ekf_ui.launch
+roslaunch BlueROVKalmanFilter blue_rov_kf_ui.launch
 ```
 
 In addition to the KF this will launch and opencv window with both the M750 and M1200 Sonar images stitched together as well as a matplotlib window with graphed data of robot state over time.
@@ -113,6 +113,6 @@ In addition to the KF this will launch and opencv window with both the M750 and 
 ### Kalman Filter + RVIZ Visualization
 To run the Kalman filter with the RVIZ visualization use the following command:
 ```
-roslaunch EKF rviz_state_viz.launch
+roslaunch BlueROVKalmanFilter rviz_state_viz.launch
 ```
 This will launch an RVIZ simulation that shows a 3 axis representation of the 6 DOF state of the robot over time.

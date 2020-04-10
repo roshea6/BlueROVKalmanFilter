@@ -64,9 +64,6 @@ private:
 	// Node handle for creating publishers within the class
 	ros::NodeHandle n_;
 
-	// VectorNav Robot state publisher
-	ros::Publisher vn_state_pub_ = n_.advertise<BlueROVKalmanFilter::robot_state>("/vn_state", 100);
-
 	// IMU Filtered state publisher
 	ros::Publisher imu_filtered_state_pub_ = n_.advertise<BlueROVKalmanFilter::robot_state>("/imu_filtered_state", 100);
 
@@ -467,46 +464,6 @@ public:
 		// Update measurement state mapping matrix H and sensor covariance matrix R
 		IMUKalmanUpdate(imu_msg); // Use the data from the IMU to update the state
 
-
-		// // TODO: REMOVE THIS LATER IT'S JUST FOR TESTING VN STATE
-		// // Put quaternion values from message into easier to use values
-		// float q_x = imu_msg.orientation.x;
-		// float q_y = imu_msg.orientation.y;
-		// float q_z = imu_msg.orientation.z;
-		// float q_w = imu_msg.orientation.w;
-
-		// // Convert into roll, pitch, and yaw
-		// // These conversions are take directly from the VectorNav Quaternion math guide 
-		// // https://www.vectornav.com/docs/default-source/documentation/vn-100-documentation/AN002.pdf?sfvrsn=19ee6b9_13
-		// float imu_yaw = atan2(2*(q_x*q_y + q_w*q_z), q_w*q_w - q_z*q_z - q_y*q_y + q_x*q_x);
-		// float imu_pitch = asin(-2*(q_x*q_z - q_y*q_w));
-		// float imu_roll = atan2(2*(q_y*q_z + q_x*q_w), q_w*q_w + q_z*q_z - q_y*q_y - q_x*q_x);
-
-		// // TODO: REMOVE THIS LATER IT'S JUST FOR TESTING
-
-		// // Create a robot state message
-		// BlueROVKalmanFilter::robot_state state_msg;
-
-		// // Set the time for the state message
-		// state_msg.header.stamp = imu_msg.header.stamp;
-
-		// // Populate message with state data
-		// state_msg.x = state_(0);
-		// state_msg.y = state_(1);
-		// state_msg.z = state_(2);
-		// state_msg.roll = imu_roll;
-		// state_msg.pitch = imu_pitch;
-		// state_msg.yaw = imu_yaw;
-		// state_msg.x_dot = state_(6);
-		// state_msg.y_dot = state_(7);
-		// state_msg.z_dot = state_(8);
-		// state_msg.roll_dot = state_(9);
-		// state_msg.pitch_dot = state_(10);
-		// state_msg.yaw_dot = state_(11);
-
-		// // Publish message
-		// vn_state_pub_.publish(state_msg);
-
 		// State message for filtered 6 DOF state
 		BlueROVKalmanFilter::robot_6_DOF_state state_6_DOF;
 
@@ -545,7 +502,6 @@ public:
 
 		imu_filtered_state_pub_.publish(filtered_state);
 
-		// printState();
 	}
 
 	// Callback function for the depth messages from the bar30 Depth sensor
@@ -617,7 +573,7 @@ public:
 		z_meas << roll, pitch, yaw, // roll, pitch, yaw
 			 imu_msg.angular_velocity.x, // roll_dot
 			 imu_msg.angular_velocity.y, // pitch_dot
-			 imu_msg.angular_velocity.z; // yaw_dot // ! Change this back from 0
+			 imu_msg.angular_velocity.z; // yaw_dot 
 
 		VectorXd z_pred = H_IMU_ *state_;
 
@@ -763,14 +719,6 @@ public:
 		cout << F_ << endl;
 		cout << "\n";
 
-		// cout << "DVL H Matrix" << endl;
-		// cout << H_DVL_ << endl;
-		// cout << "\n";
-
-		// cout << "DVL R Matrix" << endl;
-		// cout << R_DVL_ << endl;
-		// cout << "\n";
-
 		cout << "Q Matrix" << endl;
 		cout << Q_ << endl;
 		cout << "\n";
@@ -788,7 +736,7 @@ int main(int argc, char **argv)
 	// Create the node handle to communicate with ROS
 	ros::NodeHandle n;
 
-	// Create and instance of the extended Kalman Filter Object
+	// Create and instance of the Kalman Filter Object
 	BlueROVKF kf;
 
 	// Display the state vector and covariance matrix.

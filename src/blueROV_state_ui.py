@@ -19,7 +19,7 @@ from bar30_depth.msg import Depth
 from rti_dvl.msg import DVL
 
 # Robot state message
-from EKF.msg import robot_state
+from BlueROVKalmanFilter.msg import robot_state
 
 # Images for Sonar data
 from sensor_msgs.msg import Image
@@ -78,7 +78,7 @@ class BlueROVVisualizer(object):
 
 		self.raw_robot_depth = 0
 
-	# Recieves messages from the EKF node about the latest state
+	# Recieves messages from the KF node about the latest state
 	def robotStateCallback(self, state_msg):
 		# Append orientation values into their proper arrays
 		self.roll_ar.append(state_msg.roll)

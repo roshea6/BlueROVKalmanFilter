@@ -16,7 +16,7 @@ from bar30_depth.msg import Depth
 from rti_dvl.msg import DVL
 
 # Robot state message
-from EKF.msg import robot_state
+from BlueROVKalmanFilter.msg import robot_state
 
 # Class for visualizing robot state data from the IMU
 class IMUVisualizer(object):
@@ -69,25 +69,8 @@ class IMUVisualizer(object):
 		# Graph interval
 		self.INTERVAL = 15
 
-
-	# Recieves messages directly from the IMU topic and plots it
-	def vnStateCallback(self, imu_msg):
-		# Get the start time to make graphing look better
-		if(self.vn_started == False):
-			self.vn_start_time = rospy.Time.now()
-			self.vn_started = True
-
-		# Append values from state_msg into their proper arrays
-		self.vn_roll_ar.append(imu_msg.roll)
-		self.vn_pitch_ar.append(imu_msg.pitch)
-		self.vn_yaw_ar.append(imu_msg.yaw)
-
-		# Update time array with latest time since start
-		self.vn_time_ar.append(imu_msg.header.stamp.secs - self.vn_start_time.secs)
-
-
-	# Recieves messages from the EKF node about the latest state
-	def ekfIMUStateCallback(self, state_msg):
+	# Recieves messages from the kf node about the latest state
+	def kfIMUStateCallback(self, state_msg):
 		# print state_msg
 
 		# Get the start time to make graphing look better
@@ -106,7 +89,7 @@ class IMUVisualizer(object):
 		self.time_ar.append(state_msg.header.stamp.secs - self.start_time.secs)
 
 
-	# Recieves messages from the EKF node about the latest state
+	# Recieves messages from the kf node about the latest state
 	def unfiltIMUStateCallback(self, state_msg):
 		# print state_msg
 
@@ -123,7 +106,7 @@ class IMUVisualizer(object):
 		# Update time array with latest time since start
 		self.uf_time_ar.append(state_msg.header.stamp.secs - self.uf_start_time.secs)
 
-	# Plots the newest data from either the IMU or the EKF on the plot
+	# Plots the newest data from either the IMU or the kf on the plot
 	def plotIMUData(self, data):
 		# UNFILTERED ROBOT ORIENTATION
 		# Clear the previous data
@@ -188,28 +171,6 @@ class IMUVisualizer(object):
 		# Show the legend for the various lines
 		self.imu_ax2.legend(loc=2)
 
-		# IMU ROBOT ORIENTATION
-		# Plot for IMU data
-		# self.imu_ax3.clear()
-
-		# self.imu_ax3.set_title('IMU orientation over time')
-		# self.imu_ax3.set_xlabel('Time (seconds)')
-		# self.imu_ax3.set_ylabel('Euler Angle Values (rads)')
-
-		# # Plot roll over time
-		# roll, = self.imu_ax3.plot(self.vn_time_ar, self.vn_roll_ar)
-		# roll.set_label("Roll") # Label the line
-
-		# # Plot pitch over time
-		# pitch, = self.imu_ax3.plot(self.vn_time_ar, self.vn_pitch_ar)
-		# pitch.set_label("Pitch") # Label the line
-
-		# # Plot yaw over time
-		# yaw, = self.imu_ax3.plot(self.vn_time_ar, self.vn_yaw_ar)
-		# yaw.set_label("Yaw") # Label the line
-
-		# # Show the legend for the various lines
-		# self.imu_ax3.legend()
 
 # Class for visualizing robot state data from the DVL
 class DVLVisualizer(object):
@@ -253,7 +214,7 @@ class DVLVisualizer(object):
 		self.INTERVAL = 20
 
 	# Callback function for gathering the filtered DVL data
-	def ekfDVLCallback(self, state_msg):
+	def kfDVLCallback(self, state_msg):
 		# Get the start time to make graphing look better
 		if(self.started == False):
 			self.start_time = rospy.Time.now()
@@ -284,7 +245,7 @@ class DVLVisualizer(object):
 		self.uf_time_ar.append(state_msg.header.stamp.secs - self.uf_start_time.secs)
 
 
-	# Plots the newest data from either the DVL or the EKF on the plot
+	# Plots the newest data from either the DVL or the kf on the plot
 	def plotDVLData(self, data):
 		# UNFILTERED ROBOT Velocity
 		# Clear the previous data
@@ -389,7 +350,7 @@ class DepthVisualizer(object):
 		self.INTERVAL = 20
 
 	# Callback function for gathering the filtered depth data
-	def ekfDepthCallback(self, state_msg):
+	def kfDepthCallback(self, state_msg):
 		# Get the start time to make graphing look better
 		if(self.started == False):
 			self.start_time = rospy.Time.now()
@@ -416,7 +377,7 @@ class DepthVisualizer(object):
 		self.uf_time_ar.append(state_msg.header.stamp.secs - self.uf_start_time.secs)
 
 
-	# Plots the newest data from either the Depth or the EKF on the plot
+	# Plots the newest data from either the Depth or the kf on the plot
 	def plotDepthData(self, data):
 		# UNFILTERED ROBOT Depth
 		# Clear the previous data
@@ -474,19 +435,16 @@ if __name__ == "__main__":
 						'legend.fontsize': 20})
 
 	# Initialize the ROS node
-	rospy.init_node("ekf_visualizer", anonymous=True)
+	rospy.init_node("kf_visualizer", anonymous=True)
 
 	# Visualizer object which will be used to keep track of the IMU state and plot it
 	imu_vis = IMUVisualizer()
 
 	# Subscriber for filtered IMU state 
-	rospy.Subscriber('/imu_filtered_state', robot_state, imu_vis.ekfIMUStateCallback)
+	rospy.Subscriber('/imu_filtered_state', robot_state, imu_vis.kfIMUStateCallback)
 
 	# Subsriber for the unfiltered IMU state
 	rospy.Subscriber('/imu_unfiltered_state', robot_state, imu_vis.unfiltIMUStateCallback)
-
-	# Subscriber for robot state from pure IMU data
-	rospy.Subscriber('/vn_state', robot_state, imu_vis.vnStateCallback)
 
 	# Set the figure to update every second using the plotData function in the Visualizer class
 	# The plotData function will clear the previous data and replot with any new data received
@@ -500,7 +458,7 @@ if __name__ == "__main__":
 	dvl_vis = DVLVisualizer()
 
 	# Subsriber for filtered DVL state
-	rospy.Subscriber('/dvl_filtered_state', robot_state, dvl_vis.ekfDVLCallback)
+	rospy.Subscriber('/dvl_filtered_state', robot_state, dvl_vis.kfDVLCallback)
 
 	# Subscriber for unfiltered DVL state
 	rospy.Subscriber('/dvl_unfiltered_state', robot_state, dvl_vis.unfiltDVLCallback)
@@ -512,7 +470,7 @@ if __name__ == "__main__":
 	depth_vis = DepthVisualizer()
 
 	# Subsriber for filtered DVL state
-	rospy.Subscriber('/depth_filtered_state', robot_state, depth_vis.ekfDepthCallback)
+	rospy.Subscriber('/depth_filtered_state', robot_state, depth_vis.kfDepthCallback)
 
 	# Subscriber for unfiltered DVL state
 	rospy.Subscriber('/depth_unfiltered_state', robot_state, depth_vis.unfiltDepthCallback)
