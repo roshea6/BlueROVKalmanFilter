@@ -105,6 +105,10 @@ roslaunch EKF blue_rov_ekf_ui.launch
 
 In addition to the KF this will launch and opencv window with both the M750 and M1200 Sonar images stitched together as well as a matplotlib window with graphed data of robot state over time.
 
+<p align='center'>
+    <img src="/media/blueROV_ui.gif" alt="BlueROV" width="800"/>
+</p>
+
 
 ### Kalman Filter + RVIZ Visualization
 To run the Kalman filter with the RVIZ visualization use the following command:
