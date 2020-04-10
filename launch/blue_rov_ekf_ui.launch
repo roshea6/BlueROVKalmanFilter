@@ -1,12 +1,12 @@
 <?xml version="1.0"?>
 <launch>
-	<!-- Extended kalman filter node -->
-	<node pkg="EKF" type="ekf" name="ekf_node"></node>
+	<!-- kalman filter node -->
+	<node pkg="BlueROVKalmanFilter" type="blueROV_kf" name="blueROV_kf_node"></node>
 
 	<!-- Data visualizer node -->
-	<node pkg="EKF" type="blueROV_state_ui.py" name="visualizer" output="screen"></node>
+	<node pkg="BlueROVKalmanFilter" type="blueROV_state_ui.py" name="visualizer" output="screen"></node>
 
 	<!-- Play the desire rosbag file -->
-	<node pkg="rosbag" type="play" name="player" output="screen" args="--clock $(find EKF)/bags/2020-02-17-11-34-35.bag"/>
+	<node pkg="rosbag" type="play" name="player" output="screen" args="--clock $(find BlueROVKalmanFilter)/bags/2020-02-17-11-34-35.bag"/>
 
 </launch>

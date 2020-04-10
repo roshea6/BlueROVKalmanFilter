@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<launch>
+	<!-- kalman filter node -->
+	<node pkg="BlueROVKalmanFilter" type="blueROV_kf" name="blueROV_kf_node"></node>
+
+	<!-- Data visualizer node -->
+	<node pkg="BlueROVKalmanFilter" type="data_visualizer.py" name="visualizer" output="screen"></node>
+
+	<!-- Play the desire rosbag file -->
+	<node pkg="rosbag" type="play" name="player" output="screen" args="--clock $(find BlueROVKalmanFilter)/bags/2018-10-26-15-43-56.bag"/>
+
+</launch>

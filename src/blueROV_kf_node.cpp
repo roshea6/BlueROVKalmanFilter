@@ -1,4 +1,4 @@
-// Extended Kalman Filter Node for BlueROV
+// Kalman Filter Node for BlueROV
 
 #include <iostream>
 #include "Eigen/Dense"
@@ -15,8 +15,8 @@
 #include <rti_dvl/DVL.h>
 
 // Custom robot state messages
-#include <EKF/robot_state.h>
-#include <EKF/robot_6_DOF_state.h>
+#include <BlueROVKalmanFilter/robot_state.h>
+#include <BlueROVKalmanFilter/robot_6_DOF_state.h>
 
 // Posestamped messages
 #include <geometry_msgs/PoseStamped.h>
@@ -28,7 +28,7 @@ using Eigen::MatrixXd;
 using Eigen::VectorXd;
 using Eigen::Quaternionf;
 
-class extendedKF {
+class BlueROVKF {
 private:
 	//State vector [x, y, z, roll, pitch, yaw, x_dot, y_dot, z_dot, roll_dot, pitch_dot, yaw_dot] 
 	// Numbered    [0, 1, 2, 3,    4,     5,   6,     7,     8,     9,        10,        11]
@@ -65,28 +65,28 @@ private:
 	ros::NodeHandle n_;
 
 	// VectorNav Robot state publisher
-	ros::Publisher vn_state_pub_ = n_.advertise<EKF::robot_state>("/vn_state", 100);
+	ros::Publisher vn_state_pub_ = n_.advertise<BlueROVKalmanFilter::robot_state>("/vn_state", 100);
 
 	// IMU Filtered state publisher
-	ros::Publisher imu_filtered_state_pub_ = n_.advertise<EKF::robot_state>("/imu_filtered_state", 100);
+	ros::Publisher imu_filtered_state_pub_ = n_.advertise<BlueROVKalmanFilter::robot_state>("/imu_filtered_state", 100);
 
 	// IMU Unfiltered state publisher
-	ros::Publisher imu_unfiltered_state_pub_ = n_.advertise<EKF::robot_state>("/imu_unfiltered_state", 100);
+	ros::Publisher imu_unfiltered_state_pub_ = n_.advertise<BlueROVKalmanFilter::robot_state>("/imu_unfiltered_state", 100);
 
 	// DVL Filtered state publisher
-	ros::Publisher dvl_filtered_state_pub_ = n_.advertise<EKF::robot_state>("/dvl_filtered_state", 100);
+	ros::Publisher dvl_filtered_state_pub_ = n_.advertise<BlueROVKalmanFilter::robot_state>("/dvl_filtered_state", 100);
 
 	// DVL Unfiltered state publisher
-	ros::Publisher dvl_unfiltered_state_pub_ = n_.advertise<EKF::robot_state>("/dvl_unfiltered_state", 100);
+	ros::Publisher dvl_unfiltered_state_pub_ = n_.advertise<BlueROVKalmanFilter::robot_state>("/dvl_unfiltered_state", 100);
 
 	// DVL Filtered state publisher
-	ros::Publisher depth_filtered_state_pub_ = n_.advertise<EKF::robot_state>("/depth_filtered_state", 100);
+	ros::Publisher depth_filtered_state_pub_ = n_.advertise<BlueROVKalmanFilter::robot_state>("/depth_filtered_state", 100);
 
 	// DVL Unfiltered state publisher
-	ros::Publisher depth_unfiltered_state_pub_ = n_.advertise<EKF::robot_state>("/depth_unfiltered_state", 100);
+	ros::Publisher depth_unfiltered_state_pub_ = n_.advertise<BlueROVKalmanFilter::robot_state>("/depth_unfiltered_state", 100);
 
 	// State publisher for the 6 DOF state (x, y, z, roll, pitch, yaw)
-	ros::Publisher DOF_6_state_pub_ = n_.advertise<EKF::robot_6_DOF_state>("/6_DOF_state", 100);
+	ros::Publisher DOF_6_state_pub_ = n_.advertise<BlueROVKalmanFilter::robot_6_DOF_state>("/6_DOF_state", 100);
 
 	// Pose publisher for robot
 	ros::Publisher robot_pose_pub_ = n_.advertise<geometry_msgs::PoseStamped>("/robot_pose", 100);
@@ -109,7 +109,7 @@ private:
 
 public:
 	// Constructor 
-	extendedKF()
+	BlueROVKF()
 	{
 		// Declare state vector to be of size 12
 		state_ = VectorXd(12);
@@ -329,7 +329,7 @@ public:
 	}
 
 	// Destuctor
-	~extendedKF()
+	~BlueROVKF()
 	{
 
 	}
@@ -393,7 +393,7 @@ public:
 		{
 			// TODO: Publish unfiltered depth here
 			// Create state message to hold depth data
-			EKF::robot_state uf_depth;
+			BlueROVKalmanFilter::robot_state uf_depth;
 
 			// Set time stamp for message
 			uf_depth.header.stamp = ros::Time::now();
@@ -408,7 +408,7 @@ public:
 
 			// TODO: Publish filtered depth here
 			// Create state message to hold depth data
-			EKF::robot_state filt_depth;
+			BlueROVKalmanFilter::robot_state filt_depth;
 
 			// Set timestamp for header
 			filt_depth.header.stamp = ros::Time::now();
@@ -429,7 +429,7 @@ public:
 		if(DVL_msg_ != nullptr)
 		{
 			// TODO: Remove this later. Just for testing
-			EKF::robot_state uf_dvl;
+			BlueROVKalmanFilter::robot_state uf_dvl;
 
 			// Temp variables to make code look cleaner
 			float x_vel = DVL_msg_->velocity.x;
@@ -447,7 +447,7 @@ public:
 			DVLKalmanUpdate();
 
 			// TODO: Remove this later. Just for testing
-			EKF::robot_state filt_dvl;
+			BlueROVKalmanFilter::robot_state filt_dvl;
 
 			filt_dvl.header.stamp = ros::Time::now(); //DVL_msg_->header.stamp;
 			filt_dvl.x_dot = state_(6);
@@ -485,7 +485,7 @@ public:
 		// // TODO: REMOVE THIS LATER IT'S JUST FOR TESTING
 
 		// // Create a robot state message
-		// EKF::robot_state state_msg;
+		// BlueROVKalmanFilter::robot_state state_msg;
 
 		// // Set the time for the state message
 		// state_msg.header.stamp = imu_msg.header.stamp;
@@ -508,7 +508,7 @@ public:
 		// vn_state_pub_.publish(state_msg);
 
 		// State message for filtered 6 DOF state
-		EKF::robot_6_DOF_state state_6_DOF;
+		BlueROVKalmanFilter::robot_6_DOF_state state_6_DOF;
 
 		// Set the timestamp for the message
 		state_6_DOF.header.stamp = ros::Time::now();
@@ -527,7 +527,7 @@ public:
 
 		// Publish filtered state after latest update
 		// State message for filtered robot state
-		EKF::robot_state filtered_state;
+		BlueROVKalmanFilter::robot_state filtered_state;
 
 		// Set the timestamp for the message
 		filtered_state.header.stamp = ros::Time::now(); 
@@ -583,7 +583,7 @@ public:
 	void IMUKalmanUpdate(const sensor_msgs::Imu imu_msg)
 	{
 		// State message for robot state
-		EKF::robot_state uf_state;
+		BlueROVKalmanFilter::robot_state uf_state;
 
 		// Set the timestamp for the message
 		uf_state.header.stamp = ros::Time::now(); //imu_msg.header.stamp;
@@ -783,26 +783,26 @@ public:
 int main(int argc, char **argv)
 {
 	// Initialize the ROS node
-	ros::init(argc, argv, "EKF");
+	ros::init(argc, argv, "BlueROVKalmanFilter");
 
 	// Create the node handle to communicate with ROS
 	ros::NodeHandle n;
 
 	// Create and instance of the extended Kalman Filter Object
-	extendedKF ekf;
+	BlueROVKF kf;
 
 	// Display the state vector and covariance matrix.
 	// TODO: Remove later. Just for debugging
-	ekf.printState();
+	kf.printState();
 
 	// Callback function for the IMU messages
-	ros::Subscriber imu_sub = n.subscribe("/vn100/imu/raw", 100, &extendedKF::IMUCallback, &ekf);
+	ros::Subscriber imu_sub = n.subscribe("/vn100/imu/raw", 100, &BlueROVKF::IMUCallback, &kf);
 
 	// Callback function for the depth messages
-	ros::Subscriber depth_sub = n.subscribe("/bar30/depth/raw", 100, &extendedKF::depthCallback, &ekf);
+	ros::Subscriber depth_sub = n.subscribe("/bar30/depth/raw", 100, &BlueROVKF::depthCallback, &kf);
 
 	// Callback function for the DVL messages
-	ros::Subscriber dvl_sub = n.subscribe("/rti/body_velocity/raw", 100, &extendedKF::DVLCallback, &ekf);
+	ros::Subscriber dvl_sub = n.subscribe("/rti/body_velocity/raw", 100, &BlueROVKF::DVLCallback, &kf);
 
 	ros::spin();
 
